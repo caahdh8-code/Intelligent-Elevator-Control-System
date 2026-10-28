@@ -1,133 +1,236 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Kawalan Lif IoT Contactless</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            color: #ffffff;
-        }
-        .elevator-container {
-            background-color: #1e293b;
-            padding: 35px;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            width: 100%;
-            max-width: 380px;
-            box-sizing: border-box;
-            border: 2px solid #334155;
-        }
-        h2 {
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 25px;
-            font-size: 20px;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #cbd5e1;
-            border-bottom: 2px solid #334155;
-            padding-bottom: 15px;
-        }
-        .button-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-        }
-        .lift-btn {
-            width: 85px;
-            height: 85px;
-            border-radius: 50%;
-            background: linear-gradient(145deg, #334155, #1e293b);
-            border: 3px solid #475569;
-            color: #cbd5e1;
-            font-size: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-            transition: all 0.2s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            outline: none;
-        }
-        .lift-btn:hover {
-            transform: translateY(-2px);
-            border-color: #64748b;
-        }
-        .lift-btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .status-bar {
-            text-align: center;
-            margin-top: 25px;
-            font-size: 14px;
-            color: #27ae60;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intelligent Elevator Control System</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 14px;
+      font-family: Arial, sans-serif;
+      background: #edf2f7;
+      color: #172033;
+    }
+    header {
+      max-width: 540px;
+      margin: auto;
+      padding: 24px 18px;
+      color: white;
+      background: #173b70;
+      border-radius: 18px;
+      text-align: center;
+    }
+    header h1 { font-size: 24px; margin: 0 0 10px; }
+    header p { margin: 0; line-height: 1.5; }
+    main { max-width: 540px; margin: 18px auto; }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 16px;
+      border-radius: 15px;
+      box-shadow: 0 3px 12px #0000000d;
+    }
+    label { display: block; font-weight: bold; margin: 14px 0 7px; }
+    select, button {
+      width: 100%;
+      padding: 13px;
+      border-radius: 9px;
+      font-size: 16px;
+    }
+    select { border: 1px solid #cbd5e1; background: white; }
+    button {
+      margin-top: 18px;
+      border: 0;
+      background: #1769aa;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .muted { color: #64748b; font-size: 14px; line-height: 1.5; }
+    .status { font-weight: bold; overflow-wrap: anywhere; }
+    .request {
+      border: 1px solid #dce4ef;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Intelligent Elevator Control System</h1>
+    <p>NFC-Based Web Elevator Control</p>
+  </header>
 
-<div class="elevator-container">
-    <h2>Smart Lift Panel</h2>
+  <main>
+    <section class="card">
+      <h2>Request an Elevator</h2>
+      <p class="muted">
+        Select the floor where you are waiting, then select your destination.
+      </p>
 
-    <!-- PANEL BUTANG LIF BULAT PREMIUM -->
-    <div class="button-layout">
-        <button class="lift-btn" id="btn-3" onclick="pilihTingkat(3)">3</button>
-        <button class="lift-btn" id="btn-2" onclick="pilihTingkat(2)">2</button>
-        <button class="lift-btn" id="btn-1" onclick="pilihTingkat(1)">1</button>
-    </div>
+      <label for="pickup">Current Floor / Pickup Floor</label>
+      <select id="pickup">
+        <option value="1">Floor 1</option>
+        <option value="2">Floor 2</option>
+        <option value="3">Floor 3</option>
+      </select>
 
-    <div id="networkStatus" class="status-bar">Sistem Bersedia</div>
-</div>
+      <label for="destination">Destination Floor</label>
+      <select id="destination">
+        <option value="1">Floor 1</option>
+        <option value="2">Floor 2</option>
+        <option value="3" selected>Floor 3</option>
+      </select>
 
-<script>
-    // Memakai kaedah URL REST API asal yang terbukti elok sebelum ini
-    const FIREBASE_URL = "https://firebasedatabase.app";
-    const FIREBASE_AUTH = "IsP8TU5blWhYbEqjIq32U5RKHnAs4bPKm0aHXDn8";
+      <button id="submit">Submit Request</button>
+      <p id="message" class="status" aria-live="polite"></p>
+    </section>
 
-    const statusText = document.getElementById("networkStatus");
+    <section class="card">
+      <h2>Elevator Status</h2>
+      <p>Last confirmed floor: <strong id="liftFloor">Unknown</strong></p>
+      <p>System status: <strong id="liftStatus">Connecting...</strong></p>
+      <p class="muted" id="connection">Connecting to Firebase...</p>
+    </section>
 
-    // 📤 FUNGSI HANTAR DATA ASAL (100% SEPERTI KOD AWAK YANG ELOK DULU)
-    function pilihTingkat(floorNumber) {
-        statusText.style.color = "#f59e0b";
-        statusText.innerText = `Menghantar arahan Tingkat ${floorNumber}...`;
-        
-        const fullURL = `${FIREBASE_URL}/command/destinationFloor.json?auth=${FIREBASE_AUTH}`;
+    <section class="card">
+      <h2>My Requests</h2>
+      <div id="myRequests" class="muted">
+        Your submitted requests will appear here.
+      </div>
+    </section>
+  </main>
 
-        fetch(fullURL, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(floorNumber) // Hantar angka tingkat tulen
-        })
-        .then(response => {
-            if (response.ok) {
-                statusText.style.color = "#27ae60";
-                statusText.innerText = `✔️ Sukses! Lif diarahkan ke Tingkat ${floorNumber}`;
-            } else {
-                statusText.style.color = "#c0392b";
-                statusText.innerText = `❌ Ralat Server: ${response.status}`;
-            }
-        })
-        .catch(error => {
-            console.error(error);
-            statusText.style.color = "#c0392b";
-            statusText.innerText = "❌ Gangguan Rangkaian.";
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLwdDM4-6FUgAv7mDvN1mNpn2zzpiJgJQ",
+      authDomain: "relay-testing-f5dfd.firebaseapp.com",
+      databaseURL: "https://relay-testing-f5dfd-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "relay-testing-f5dfd",
+      storageBucket: "relay-testing-f5dfd.firebasestorage.app",
+      messagingSenderId: "593606294584",
+      appId: "1:593606294584:web:be9faa41bc5ca5d13d3acd",
+      measurementId: "G-RXRKC0VETR"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const pickup = document.getElementById("pickup");
+    const destination = document.getElementById("destination");
+    const submit = document.getElementById("submit");
+    const message = document.getElementById("message");
+    const myRequests = document.getElementById("myRequests");
+
+    // Identify requests from this browser session.
+    // For real multi-user identity, add Firebase Authentication.
+    const sessionId = sessionStorage.getItem("smartLiftSession")
+      || (crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now() + "-" + Math.random().toString(36).slice(2));
+
+    sessionStorage.setItem("smartLiftSession", sessionId);
+
+    let requestIds = [];
+
+    submit.addEventListener("click", async () => {
+      const p = Number(pickup.value);
+      const d = Number(destination.value);
+
+      if (p === d) {
+        message.textContent =
+          "Please select a different destination floor.";
+        return;
+      }
+
+      submit.disabled = true;
+      message.textContent = "Submitting request...";
+
+      try {
+        const newRequest = db.ref("Requests").push();
+
+        await newRequest.set({
+          pickupFloor: p,
+          destinationFloor: d,
+          status: "WAITING",
+          sessionId: sessionId,
+          createdAt: firebase.database.ServerValue.TIMESTAMP
         });
-    }
-</script>
 
+        requestIds.push(newRequest.key);
+        message.textContent =
+          "Request submitted successfully. Queue ID: " + newRequest.key;
+      } catch (error) {
+        message.textContent =
+          "Firebase error: " + error.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    db.ref("CurrentLiftFloor").on("value", snap => {
+      const floor = snap.val();
+      document.getElementById("liftFloor").textContent =
+        floor === 1 || floor === 2 || floor === 3
+          ? "Floor " + floor : "Unknown";
+    }, showError);
+
+    db.ref("LiftStatus").on("value", snap => {
+      document.getElementById("liftStatus").textContent =
+        snap.val() || "Unknown";
+    }, showError);
+
+    db.ref(".info/connected").on("value", snap => {
+      document.getElementById("connection").textContent =
+        snap.val() ? "Firebase connected" : "Firebase disconnected";
+    });
+
+    // Listen to all requests and display this session's requests.
+    db.ref("Requests").on("value", snap => {
+      myRequests.innerHTML = "";
+      let found = false;
+
+      snap.forEach(child => {
+        const r = child.val();
+        if (!r || r.sessionId !== sessionId) return;
+
+        found = true;
+        const item = document.createElement("div");
+        item.className = "request";
+
+        const title = document.createElement("strong");
+        title.textContent =
+          "Floor " + r.pickupFloor + " → Floor " + r.destinationFloor;
+
+        const status = document.createElement("p");
+        status.textContent = "Status: " + (r.status || "Unknown");
+
+        const id = document.createElement("p");
+        id.className = "muted";
+        id.textContent = "Request ID: " + child.key;
+
+        item.append(title, status, id);
+        myRequests.appendChild(item);
+      });
+
+      if (!found) {
+        myRequests.textContent = "No requests submitted in this session.";
+        myRequests.className = "muted";
+      }
+    }, showError);
+
+    function showError(error) {
+      document.getElementById("connection").textContent =
+        "Firebase error: " + error.message;
+    }
+  </script>
 </body>
 </html>
