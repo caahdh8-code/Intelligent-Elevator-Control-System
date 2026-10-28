@@ -9,7 +9,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -33,22 +35,31 @@
     header h1 {
       margin: 0 0 10px;
       font-size: 25px;
-      line-height: 1.3;
+      line-height: 1.35;
     }
 
-    header p { margin: 0; color: #dceaff; }
+    header p {
+      margin: 0;
+      color: #dceaff;
+      font-size: 14px;
+    }
 
-    main { max-width: 520px; margin: auto; }
+    main {
+      max-width: 520px;
+      margin: auto;
+    }
 
     .card {
       padding: 22px;
-      margin-bottom: 18px;
       background: white;
       border-radius: 18px;
       box-shadow: 0 5px 20px #172b4d0d;
     }
 
-    h2 { margin: 0 0 10px; font-size: 21px; }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
 
     .subtitle {
       color: #68778d;
@@ -58,9 +69,10 @@
 
     .step-label {
       display: block;
-      margin: 23px 0 12px;
+      margin: 24px 0 12px;
+      font-size: 14px;
       font-weight: bold;
-      font-size: 15px;
+      color: #385778;
     }
 
     .floor-buttons {
@@ -70,21 +82,24 @@
     }
 
     .floor-btn {
-      width: 100%;
       display: flex;
       align-items: center;
       gap: 14px;
-      padding: 14px;
+      width: 100%;
+      padding: 15px;
       text-align: left;
+      color: #24466e;
+      background: #f8fbff;
       border: 2px solid #dce6f3;
       border-radius: 14px;
-      background: #f8fbff;
-      color: #24466e;
       cursor: pointer;
-      transition: .2s;
+      transition: background 0.2s, border-color 0.2s;
     }
 
-    .floor-btn:active { transform: scale(.99); }
+    .floor-btn:hover:not(:disabled) {
+      background: #edf5ff;
+      border-color: #1769aa;
+    }
 
     .floor-number {
       display: flex;
@@ -93,14 +108,16 @@
       width: 46px;
       height: 46px;
       flex-shrink: 0;
-      border-radius: 12px;
-      background: #e1edff;
       color: #1769aa;
+      background: #e1edff;
+      border-radius: 12px;
       font-size: 23px;
       font-weight: bold;
     }
 
-    .floor-info { flex: 1; }
+    .floor-info {
+      flex: 1;
+    }
 
     .floor-name {
       display: block;
@@ -111,93 +128,88 @@
     .floor-description {
       display: block;
       margin-top: 5px;
-      font-size: 12px;
       color: #718096;
+      font-size: 12px;
     }
 
-    .floor-btn.selected {
-      background: #e8f2ff;
-      border-color: #1769aa;
-    }
-
-    .floor-btn.selected .floor-number {
-      background: #1769aa;
-      color: white;
+    .floor-arrow {
+      color: #7a91aa;
+      font-size: 22px;
     }
 
     .floor-btn:disabled {
-      opacity: .4;
+      color: #94a3b8;
+      background: #f1f3f6;
+      border-color: #e1e5eb;
       cursor: not-allowed;
     }
 
-    .hidden { display: none !important; }
+    .floor-btn:disabled .floor-number {
+      color: #94a3b8;
+      background: #e3e7ed;
+    }
+
+    .hidden {
+      display: none !important;
+    }
 
     .message {
-      padding: 13px;
       margin-top: 18px;
+      padding: 13px;
       border-radius: 11px;
       font-size: 14px;
       line-height: 1.6;
       overflow-wrap: anywhere;
     }
 
-    .success { background: #e5f8ec; color: #176a39; }
-    .error { background: #ffe9e7; color: #b42318; }
-    .info { background: #eaf3ff; color: #174ea6; }
-
-    .status-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid #edf0f5;
+    .success {
+      color: #176a39;
+      background: #e5f8ec;
     }
 
-    .status-row:last-child { border-bottom: 0; }
-
-    .status-value {
-      text-align: right;
-      font-weight: bold;
-      overflow-wrap: anywhere;
+    .error {
+      color: #b42318;
+      background: #ffe9e7;
     }
 
-    .request {
-      padding: 13px;
-      margin-top: 10px;
-      border: 1px solid #e1e8f0;
-      border-radius: 12px;
-      overflow-wrap: anywhere;
-    }
-
-    .request p {
-      margin: 8px 0 0;
-      font-size: 13px;
-      color: #68778d;
+    .info {
+      color: #174ea6;
+      background: #eaf3ff;
     }
 
     .new-request {
       width: 100%;
       margin-top: 15px;
-      padding: 13px;
-      border: 0;
-      border-radius: 11px;
-      background: #1769aa;
+      padding: 14px;
       color: white;
+      background: #1769aa;
+      border: none;
+      border-radius: 11px;
       font-size: 15px;
       font-weight: bold;
       cursor: pointer;
     }
 
+    .new-request:hover {
+      background: #12558d;
+    }
+
     .footer {
+      margin-top: 22px;
       text-align: center;
       color: #75839a;
       font-size: 12px;
-      padding: 10px;
+      line-height: 1.6;
     }
 
     @media (max-width: 380px) {
-      header h1 { font-size: 22px; }
-      .card { padding: 17px; }
+      header h1 {
+        font-size: 21px;
+      }
+
+      .card {
+        padding: 17px;
+      }
     }
   </style>
 </head>
@@ -210,9 +222,10 @@
 </header>
 
 <main>
-
   <section class="card">
+
     <h2 id="formTitle">Request an Elevator</h2>
+
     <p class="subtitle" id="formSubtitle">
       Select your current floor first, then choose your destination.
     </p>
@@ -229,44 +242,27 @@
       <div class="floor-buttons" id="destinationButtons"></div>
     </div>
 
-    <div id="message" aria-live="polite"></div>
+    <!-- MESSAGE -->
+    <div id="message" class="hidden" aria-live="polite"></div>
 
-    <button id="newRequest" class="new-request hidden">
+    <!-- START ANOTHER REQUEST -->
+    <button id="newRequest" class="new-request hidden" type="button">
       Make Another Request
     </button>
-  </section>
 
-  <section class="card">
-    <h2>Elevator Status</h2>
-
-    <div class="status-row">
-      <span>Last confirmed floor</span>
-      <span class="status-value" id="liftFloor">Unknown</span>
-    </div>
-
-    <div class="status-row">
-      <span>System status</span>
-      <span class="status-value" id="liftStatus">Connecting...</span>
-    </div>
-
-    <p id="connection" class="subtitle">Connecting to Firebase...</p>
-  </section>
-
-  <section class="card">
-    <h2>My Requests</h2>
-    <div id="myRequests" class="subtitle">
-      No requests submitted yet.
-    </div>
   </section>
 
   <p class="footer">
-    Intelligent Elevator Control System · 3-Floor Prototype
+    Intelligent Elevator Control System<br>
+    NFC-Based Three-Floor Prototype
   </p>
-
 </main>
 
 <script>
-  // Firebase project: Relay-Testing
+  // ========================================
+  // FIREBASE CONFIGURATION
+  // ========================================
+
   const firebaseConfig = {
     apiKey: "AIzaSyCLwdDM4-6FUAv7mDvN1mNpn2zzpiJgJQ",
     authDomain: "relay-testing-f5dfd.firebaseapp.com",
@@ -279,34 +275,77 @@
   };
 
   firebase.initializeApp(firebaseConfig);
+
   const db = firebase.database();
 
-  const currentSection = document.getElementById("currentSection");
-  const destinationSection = document.getElementById("destinationSection");
-  const currentButtons = document.getElementById("currentButtons");
-  const destinationButtons = document.getElementById("destinationButtons");
-  const message = document.getElementById("message");
-  const newRequestButton = document.getElementById("newRequest");
+  // ========================================
+  // WEBSITE ELEMENTS
+  // ========================================
+
+  const currentSection =
+    document.getElementById("currentSection");
+
+  const destinationSection =
+    document.getElementById("destinationSection");
+
+  const currentButtons =
+    document.getElementById("currentButtons");
+
+  const destinationButtons =
+    document.getElementById("destinationButtons");
+
+  const message =
+    document.getElementById("message");
+
+  const newRequestButton =
+    document.getElementById("newRequest");
+
+  const formTitle =
+    document.getElementById("formTitle");
+
+  const formSubtitle =
+    document.getElementById("formSubtitle");
+
+  // ========================================
+  // USER SESSION
+  // ========================================
 
   let currentFloor = null;
-  let destinationFloor = null;
   let submitting = false;
 
-  const sessionId = sessionStorage.getItem("smartLiftSession") ||
-    (crypto.randomUUID
-      ? crypto.randomUUID()
-      : Date.now() + "-" + Math.random().toString(36).slice(2));
+  let sessionId = sessionStorage.getItem("smartLiftSession");
 
-  sessionStorage.setItem("smartLiftSession", sessionId);
+  if (!sessionId) {
+    sessionId = window.crypto &&
+                typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : Date.now() + "-" +
+        Math.random().toString(36).slice(2);
+
+    sessionStorage.setItem("smartLiftSession", sessionId);
+  }
+
+  // ========================================
+  // MESSAGE DISPLAY
+  // ========================================
 
   function showMessage(text, type) {
     message.textContent = text;
     message.className = "message " + type;
-    message.classList.remove("hidden");
   }
 
-  function makeFloorButton(floor, description, onClick) {
+  function clearMessage() {
+    message.textContent = "";
+    message.className = "hidden";
+  }
+
+  // ========================================
+  // CREATE FLOOR BUTTON
+  // ========================================
+
+  function makeFloorButton(floor, description, callback) {
     const button = document.createElement("button");
+
     button.type = "button";
     button.className = "floor-btn";
 
@@ -325,12 +364,21 @@
     detail.className = "floor-description";
     detail.textContent = description;
 
+    const arrow = document.createElement("span");
+    arrow.className = "floor-arrow";
+    arrow.textContent = "›";
+
     info.append(name, detail);
-    button.append(number, info);
-    button.addEventListener("click", onClick);
+    button.append(number, info, arrow);
+
+    button.addEventListener("click", callback);
 
     return button;
   }
+
+  // ========================================
+  // STEP 1: SHOW CURRENT FLOOR OPTIONS
+  // ========================================
 
   function renderCurrentFloors() {
     currentButtons.replaceChildren();
@@ -338,65 +386,90 @@
     [1, 2, 3].forEach(floor => {
       const button = makeFloorButton(
         floor,
-        "I am at Floor " + floor,
-        () => selectCurrentFloor(floor)
+        "I am waiting at Floor " + floor,
+        function () {
+          selectCurrentFloor(floor);
+        }
       );
 
       currentButtons.appendChild(button);
     });
   }
 
+  function selectCurrentFloor(floor) {
+    currentFloor = floor;
+
+    // Hide current-floor choices after selection.
+    currentSection.classList.add("hidden");
+
+    // Show destination choices.
+    destinationSection.classList.remove("hidden");
+
+    formSubtitle.textContent =
+      "You selected Floor " + floor +
+      ". Now choose your destination.";
+
+    renderDestinationFloors();
+
+    showMessage(
+      "Current floor selected: Floor " + floor,
+      "info"
+    );
+  }
+
+  // ========================================
+  // STEP 2: SHOW DESTINATION OPTIONS
+  // ========================================
+
   function renderDestinationFloors() {
     destinationButtons.replaceChildren();
 
     [1, 2, 3].forEach(floor => {
-      const isSameFloor = floor === currentFloor;
+      const sameFloor = floor === currentFloor;
+
+      const description = sameFloor
+        ? "You are already here!"
+        : "Travel to Floor " + floor;
 
       const button = makeFloorButton(
         floor,
-        isSameFloor ? "You are already here" : "Travel to Floor " + floor,
-        () => submitRequest(floor)
+        description,
+        function () {
+          submitRequest(floor);
+        }
       );
 
-      if (isSameFloor) {
+      if (sameFloor) {
         button.disabled = true;
+        button.setAttribute("aria-label", "You are already here");
       }
 
       destinationButtons.appendChild(button);
     });
   }
 
-  function selectCurrentFloor(floor) {
-    currentFloor = floor;
-    destinationFloor = null;
+  // ========================================
+  // SEND REQUEST TO FIREBASE
+  // ========================================
 
-    // Hide Current Floor after selection.
-    currentSection.classList.add("hidden");
-
-    // Show Destination Floor.
-    destinationSection.classList.remove("hidden");
-
-    renderDestinationFloors();
-
-    showMessage(
-      "Current floor selected: Floor " + floor +
-      ". Now choose your destination.",
-      "info"
-    );
-  }
-
-  async function submitRequest(floor) {
+  async function submitRequest(destinationFloor) {
     if (submitting) return;
 
-    if (floor === currentFloor) {
+    // Same-floor selection never creates a request.
+    if (destinationFloor === currentFloor) {
       showMessage("You are already here!", "error");
       return;
     }
 
-    destinationFloor = floor;
+    if (![1, 2, 3].includes(currentFloor) ||
+        ![1, 2, 3].includes(destinationFloor)) {
+      showMessage("Please select a valid floor.", "error");
+      return;
+    }
+
     submitting = true;
 
-    // Prevent duplicate requests while Firebase saves.
+    // Prevent repeated taps while saving.
     destinationButtons.querySelectorAll("button").forEach(button => {
       button.disabled = true;
     });
@@ -404,6 +477,7 @@
     showMessage("Sending your request to Firebase...", "info");
 
     try {
+      // Firebase generates a unique ID for every request.
       const requestRef = db.ref("Requests").push();
 
       await requestRef.set({
@@ -416,18 +490,20 @@
 
       showMessage(
         "Request submitted successfully! " +
-        "Floor " + currentFloor + " → Floor " + destinationFloor +
+        "Floor " + currentFloor +
+        " → Floor " + destinationFloor +
         ". Queue ID: " + requestRef.key,
         "success"
       );
 
-      // Hide both selection sections after successful submission.
+      // Hide both floor-selection sections after successful submission.
       currentSection.classList.add("hidden");
       destinationSection.classList.add("hidden");
 
-      document.getElementById("formTitle").textContent = "Request Submitted";
-      document.getElementById("formSubtitle").textContent =
-        "Your request has been saved in the queue.";
+      formTitle.textContent = "Request Submitted";
+
+      formSubtitle.textContent =
+        "Your request has been saved successfully.";
 
       newRequestButton.classList.remove("hidden");
 
@@ -437,93 +513,37 @@
         "error"
       );
 
-      // Keep destination choices available for retry.
+      // Restore destination choices so the user can retry.
       renderDestinationFloors();
+
     } finally {
       submitting = false;
     }
   }
 
-  newRequestButton.addEventListener("click", () => {
-    currentFloor = null;
-    destinationFloor = null;
+  // ========================================
+  // START A NEW REQUEST
+  // ========================================
 
-    document.getElementById("formTitle").textContent = "Request an Elevator";
-    document.getElementById("formSubtitle").textContent =
+  newRequestButton.addEventListener("click", function () {
+    currentFloor = null;
+
+    formTitle.textContent = "Request an Elevator";
+
+    formSubtitle.textContent =
       "Select your current floor first, then choose your destination.";
 
     newRequestButton.classList.add("hidden");
     destinationSection.classList.add("hidden");
     currentSection.classList.remove("hidden");
 
-    message.textContent = "";
-    message.className = "hidden";
-
+    clearMessage();
     renderCurrentFloors();
   });
 
-  function firebaseError(error) {
-    document.getElementById("connection").textContent =
-      "Firebase error: " + error.message;
-  }
-
-  db.ref("CurrentLiftFloor").on("value", snapshot => {
-    const floor = snapshot.val();
-
-    document.getElementById("liftFloor").textContent =
-      [1, 2, 3].includes(floor) ? "Floor " + floor : "Unknown";
-  }, firebaseError);
-
-  db.ref("LiftStatus").on("value", snapshot => {
-    document.getElementById("liftStatus").textContent =
-      snapshot.val() || "IDLE";
-  }, firebaseError);
-
-  db.ref(".info/connected").on("value", snapshot => {
-    document.getElementById("connection").textContent =
-      snapshot.val()
-        ? "Connected to Firebase"
-        : "Disconnected from Firebase";
-  });
-
-  db.ref("Requests").on("value", snapshot => {
-    const list = document.getElementById("myRequests");
-    list.replaceChildren();
-
-    let found = false;
-
-    snapshot.forEach(child => {
-      const request = child.val();
-
-      if (!request || request.sessionId !== sessionId) return;
-
-      found = true;
-
-      const item = document.createElement("div");
-      item.className = "request";
-
-      const title = document.createElement("strong");
-      title.textContent =
-        "Floor " + request.pickupFloor +
-        " → Floor " + request.destinationFloor;
-
-      const status = document.createElement("p");
-      status.textContent = "Status: " + (request.status || "WAITING");
-
-      const id = document.createElement("p");
-      id.textContent = "Queue ID: " + child.key;
-
-      item.append(title, status, id);
-      list.appendChild(item);
-    });
-
-    if (!found) {
-      list.textContent = "No requests submitted in this session.";
-      list.className = "subtitle";
-    } else {
-      list.className = "";
-    }
-  }, firebaseError);
+  // ========================================
+  // INITIALISE WEBSITE
+  // ========================================
 
   renderCurrentFloors();
 </script>
