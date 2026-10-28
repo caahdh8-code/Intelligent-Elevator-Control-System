@@ -10,9 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -36,6 +34,7 @@
       color: white;
       background: #244879;
       border-radius: 25px;
+      box-shadow: 0 8px 22px #17477f20;
       animation: fadeIn .5s ease;
     }
 
@@ -50,13 +49,13 @@
       line-height: 1.3;
     }
 
-    .header .subtitle {
+    .subtitle {
       margin: 12px 0 0;
       color: #dce8fb;
       font-size: clamp(16px, 3vw, 22px);
     }
 
-    .header .tagline {
+    .tagline {
       margin: 17px 0 0;
       font-size: 14px;
       letter-spacing: 1px;
@@ -137,9 +136,7 @@
       font-weight: bold;
     }
 
-    .floor-text {
-      flex: 1;
-    }
+    .floor-text { flex: 1; }
 
     .floor-name {
       display: block;
@@ -171,9 +168,7 @@
       background: #e1e5eb;
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     #message {
       margin-top: 20px;
@@ -184,9 +179,7 @@
       overflow-wrap: anywhere;
     }
 
-    #message:empty {
-      display: none;
-    }
+    #message:empty { display: none; }
 
     .message-info {
       color: #17477f;
@@ -216,9 +209,7 @@
       cursor: pointer;
     }
 
-    .action-button:hover {
-      background: #d8e7fa;
-    }
+    .action-button:hover { background: #d8e7fa; }
 
     .footer {
       margin-top: 24px;
@@ -228,35 +219,15 @@
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     @media (max-width: 520px) {
-      body {
-        padding: 12px;
-      }
-
-      .app {
-        padding: 14px;
-        border-radius: 23px;
-      }
-
-      .header {
-        padding: 27px 14px;
-        border-radius: 19px;
-      }
-
-      .panel {
-        padding: 22px 16px;
-        border-radius: 20px;
-      }
+      body { padding: 12px; }
+      .app { padding: 14px; border-radius: 23px; }
+      .header { padding: 27px 14px; border-radius: 19px; }
+      .panel { padding: 22px 16px; border-radius: 20px; }
 
       .floor-button {
         min-height: 85px;
@@ -272,17 +243,9 @@
         font-size: 28px;
       }
 
-      .floor-name {
-        font-size: 18px;
-      }
-
-      .floor-hint {
-        font-size: 12px;
-      }
-
-      .floor-arrow {
-        font-size: 27px;
-      }
+      .floor-name { font-size: 18px; }
+      .floor-hint { font-size: 12px; }
+      .floor-arrow { font-size: 27px; }
     }
   </style>
 </head>
@@ -320,20 +283,14 @@
 
         <div class="floor-list" id="destinationFloors"></div>
 
-        <button
-          type="button"
-          class="action-button"
-          id="backButton">
+        <button type="button" class="action-button" id="backButton">
           ← Change Current Floor
         </button>
       </section>
 
       <div id="message" role="status" aria-live="polite"></div>
 
-      <button
-        type="button"
-        class="action-button hidden"
-        id="againButton">
+      <button type="button" class="action-button hidden" id="againButton">
         Make Another Request
       </button>
 
@@ -350,7 +307,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyYBBoZbKfdZTy8u04v62QhdJpwFFH64mH6o",
       authDomain: "intelligent-elevator.firebaseapp.com",
-      databaseURL: "GANTIKAN_DENGAN_URL_REALTIME_DATABASE",
+      databaseURL: "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "intelligent-elevator",
       storageBucket: "intelligent-elevator.firebasestorage.app",
       messagingSenderId: "316169158322",
@@ -358,26 +315,13 @@
       measurementId: "G-F2SW86Y9FF"
     };
 
-    const currentSection =
-      document.getElementById("currentSection");
-
-    const destinationSection =
-      document.getElementById("destinationSection");
-
-    const currentFloors =
-      document.getElementById("currentFloors");
-
-    const destinationFloors =
-      document.getElementById("destinationFloors");
-
-    const message =
-      document.getElementById("message");
-
-    const backButton =
-      document.getElementById("backButton");
-
-    const againButton =
-      document.getElementById("againButton");
+    const currentSection = document.getElementById("currentSection");
+    const destinationSection = document.getElementById("destinationSection");
+    const currentFloors = document.getElementById("currentFloors");
+    const destinationFloors = document.getElementById("destinationFloors");
+    const message = document.getElementById("message");
+    const backButton = document.getElementById("backButton");
+    const againButton = document.getElementById("againButton");
 
     let db = null;
     let currentFloor = null;
@@ -438,30 +382,25 @@
       return button;
     }
 
-    // STEP 1: choose current floor
+    // Step 1: select current floor
     function renderCurrentFloors() {
       currentFloors.replaceChildren();
 
       [1, 2, 3].forEach(floor => {
         currentFloors.appendChild(
-          createFloorButton(
-            floor,
-            "Tap to select",
-            function () {
-              currentFloor = floor;
+          createFloorButton(floor, "Tap to select", function () {
+            currentFloor = floor;
+            currentSection.classList.add("hidden");
+            destinationSection.classList.remove("hidden");
 
-              currentSection.classList.add("hidden");
-              destinationSection.classList.remove("hidden");
-
-              clearMessage();
-              renderDestinationFloors();
-            }
-          )
+            clearMessage();
+            renderDestinationFloors();
+          })
         );
       });
     }
 
-    // STEP 2: choose destination floor
+    // Step 2: select destination floor
     function renderDestinationFloors() {
       destinationFloors.replaceChildren();
 
@@ -481,7 +420,7 @@
       });
     }
 
-    // Each request receives its own unique Firebase key.
+    // Save each request using a unique Firebase key
     async function submitRequest(destinationFloor) {
       if (sending) return;
 
@@ -491,10 +430,7 @@
       }
 
       if (!db) {
-        showMessage(
-          "Firebase database URL has not been configured.",
-          "message-error"
-        );
+        showMessage("Firebase is not connected.", "message-error");
         return;
       }
 
@@ -521,11 +457,7 @@
         destinationSection.classList.add("hidden");
         backButton.classList.add("hidden");
 
-        showMessage(
-          "Request sent successfully!",
-          "message-success"
-        );
-
+        showMessage("Request sent successfully!", "message-success");
         againButton.classList.remove("hidden");
 
       } catch (error) {
@@ -572,25 +504,12 @@
 
     renderCurrentFloors();
 
-    if (
-      firebaseConfig.databaseURL ===
-      "GANTIKAN_DENGAN_URL_REALTIME_DATABASE"
-    ) {
-      showMessage(
-        "Please enter your Firebase Realtime Database URL.",
-        "message-info"
-      );
-    } else {
-      try {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-      } catch (error) {
-        console.error(error);
-        showMessage(
-          "Firebase configuration error.",
-          "message-error"
-        );
-      }
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+    } catch (error) {
+      console.error(error);
+      showMessage("Firebase configuration error.", "message-error");
     }
   </script>
 </body>
