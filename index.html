@@ -1,236 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Intelligent Elevator Control System</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intelligent Elevator Control System</title>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 24px 14px;
-      font-family: Arial, sans-serif;
-      background: #edf2f7;
-      color: #172033;
-    }
-    header {
-      max-width: 540px;
-      margin: auto;
-      padding: 24px 18px;
-      color: white;
-      background: #173b70;
-      border-radius: 18px;
-      text-align: center;
-    }
-    header h1 { font-size: 24px; margin: 0 0 10px; }
-    header p { margin: 0; line-height: 1.5; }
-    main { max-width: 540px; margin: 18px auto; }
-    .card {
-      background: white;
-      padding: 20px;
-      margin-bottom: 16px;
-      border-radius: 15px;
-      box-shadow: 0 3px 12px #0000000d;
-    }
-    label { display: block; font-weight: bold; margin: 14px 0 7px; }
-    select, button {
-      width: 100%;
-      padding: 13px;
-      border-radius: 9px;
-      font-size: 16px;
-    }
-    select { border: 1px solid #cbd5e1; background: white; }
-    button {
-      margin-top: 18px;
-      border: 0;
-      background: #1769aa;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .muted { color: #64748b; font-size: 14px; line-height: 1.5; }
-    .status { font-weight: bold; overflow-wrap: anywhere; }
-    .request {
-      border: 1px solid #dce4ef;
-      border-radius: 10px;
-      padding: 12px;
-      margin-top: 10px;
-    }
-  </style>
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 14px;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg,#eaf2ff,#f7f9fc);
+  color: #172b4d;
+}
+
+header {
+  max-width: 540px;
+  margin: auto;
+  padding: 28px 16px;
+  text-align: center;
+  color: white;
+  background: linear-gradient(135deg,#123d75,#2788d8);
+  border-radius: 22px;
+  box-shadow: 0 8px 22px #123d7525;
+}
+
+header h1 { font-size: 25px; margin: 0 0 10px; }
+header p { margin: 0; opacity: .9; }
+
+main { max-width: 540px; margin: 22px auto; }
+
+.card {
+  padding: 22px;
+  margin-bottom: 18px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 5px 20px #172b4d0d;
+}
+
+h2 { margin-top: 0; }
+
+.subtitle {
+  color: #68778d;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.floor-buttons {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
+}
+
+.floor-btn {
+  padding: 17px 5px;
+  border: 2px solid #dce6f3;
+  border-radius: 13px;
+  background: #f8fbff;
+  color: #24466e;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.floor-btn .number {
+  display: block;
+  font-size: 26px;
+  margin-bottom: 5px;
+}
+
+.floor-btn.selected {
+  background: #1769aa;
+  color: white;
+  border-color: #1769aa;
+  box-shadow: 0 4px 12px #1769aa35;
+}
+
+.floor-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.section-label {
+  display: block;
+  font-weight: bold;
+  margin: 20px 0 10px;
+}
+
+.hidden { display: none; }
+
+.submit-btn {
+  width: 100%;
+  padding: 15px;
+  margin-top: 22px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  background: linear-gradient(90deg,#1769aa,#2188d8);
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.submit-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.message {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.success { background: #e5f8ec; color: #176a39; }
+.error { background: #ffe9e7; color: #b42318; }
+.info { background: #eaf3ff; color: #174ea6; }
+
+.request {
+  padding: 13px;
+  margin-top: 10px;
+  border: 1px solid #e1e8f0;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.small { color: #6b778c; font-size: 13px; }
+
+@media(max-width:380px) {
+  .floor-btn { font-size: 12px; }
+  .floor-btn .number { font-size: 22px; }
+  header h1 { font-size: 21px; }
+}
+</style>
 </head>
+
 <body>
-  <header>
-    <h1>Intelligent Elevator Control System</h1>
-    <p>NFC-Based Web Elevator Control</p>
-  </header>
 
-  <main>
-    <section class="card">
-      <h2>Request an Elevator</h2>
-      <p class="muted">
-        Select the floor where you are waiting, then select your destination.
-      </p>
+<header>
+  <h1>Intelligent Elevator Control System</h1>
+  <p>NFC-Based Web Elevator Control</p>
+</header>
 
-      <label for="pickup">Current Floor / Pickup Floor</label>
-      <select id="pickup">
-        <option value="1">Floor 1</option>
-        <option value="2">Floor 2</option>
-        <option value="3">Floor 3</option>
-      </select>
+<main>
 
-      <label for="destination">Destination Floor</label>
-      <select id="destination">
-        <option value="1">Floor 1</option>
-        <option value="2">Floor 2</option>
-        <option value="3" selected>Floor 3</option>
-      </select>
+  <section class="card">
+    <h2>Request an Elevator</h2>
+    <p class="subtitle">
+      Select your current floor first, then choose your destination.
+    </p>
 
-      <button id="submit">Submit Request</button>
-      <p id="message" class="status" aria-live="polite"></p>
-    </section>
+    <span class="section-label">1. Select Current Floor</span>
+    <div class="floor-buttons" id="currentButtons">
+      <button class="floor-btn" data-floor="1">
+        <span class="number">1</span>Floor 1
+      </button>
+      <button class="floor-btn" data-floor="2">
+        <span class="number">2</span>Floor 2
+      </button>
+      <button class="floor-btn" data-floor="3">
+        <span class="number">3</span>Floor 3
+      </button>
+    </div>
 
-    <section class="card">
-      <h2>Elevator Status</h2>
-      <p>Last confirmed floor: <strong id="liftFloor">Unknown</strong></p>
-      <p>System status: <strong id="liftStatus">Connecting...</strong></p>
-      <p class="muted" id="connection">Connecting to Firebase...</p>
-    </section>
-
-    <section class="card">
-      <h2>My Requests</h2>
-      <div id="myRequests" class="muted">
-        Your submitted requests will appear here.
+    <div id="destinationSection" class="hidden">
+      <span class="section-label">2. Select Destination Floor</span>
+      <div class="floor-buttons" id="destinationButtons">
+        <button class="floor-btn" data-floor="1">
+          <span class="number">1</span>Floor 1
+        </button>
+        <button class="floor-btn" data-floor="2">
+          <span class="number">2</span>Floor 2
+        </button>
+        <button class="floor-btn" data-floor="3">
+          <span class="number">3</span>Floor 3
+        </button>
       </div>
-    </section>
-  </main>
+    </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCLwdDM4-6FUgAv7mDvN1mNpn2zzpiJgJQ",
-      authDomain: "relay-testing-f5dfd.firebaseapp.com",
-      databaseURL: "https://relay-testing-f5dfd-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "relay-testing-f5dfd",
-      storageBucket: "relay-testing-f5dfd.firebasestorage.app",
-      messagingSenderId: "593606294584",
-      appId: "1:593606294584:web:be9faa41bc5ca5d13d3acd",
-      measurementId: "G-RXRKC0VETR"
-    };
+    <div id="message" aria-live="polite"></div>
+    <button id="submit" class="submit-btn hidden" disabled>
+      Confirm Elevator Request
+    </button>
+  </section>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  <section class="card">
+    <h2>Elevator Status</h2>
+    <p>Last confirmed floor: <strong id="liftFloor">Unknown</strong></p>
+    <p>System status: <strong id="liftStatus">Connecting...</strong></p>
+    <p id="connection" class="small">Connecting to Firebase...</p>
+  </section>
 
-    const pickup = document.getElementById("pickup");
-    const destination = document.getElementById("destination");
-    const submit = document.getElementById("submit");
-    const message = document.getElementById("message");
-    const myRequests = document.getElementById("myRequests");
+  <section class="card">
+    <h2>My Requests</h2>
+    <div id="myRequests" class="small">
+      No requests submitted yet.
+    </div>
+  </section>
 
-    // Identify requests from this browser session.
-    // For real multi-user identity, add Firebase Authentication.
-    const sessionId = sessionStorage.getItem("smartLiftSession")
-      || (crypto.randomUUID
-        ? crypto.randomUUID()
-        : Date.now() + "-" + Math.random().toString(36).slice(2));
+</main>
 
-    sessionStorage.setItem("smartLiftSession", sessionId);
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCLwdDM4-6FUAv7mDvN1mNpn2zzpiJgJQ",
+  authDomain: "relay-testing-f5dfd.firebaseapp.com",
+  databaseURL: "https://relay-testing-f5dfd-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "relay-testing-f5dfd",
+  storageBucket: "relay-testing-f5dfd.firebasestorage.app",
+  messagingSenderId: "593606294584",
+  appId: "1:593606294584:web:be9faa41bc5ca5d13d3acd",
+  measurementId: "G-RXRKC0VETR"
+};
 
-    let requestIds = [];
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    submit.addEventListener("click", async () => {
-      const p = Number(pickup.value);
-      const d = Number(destination.value);
+let currentFloor = null;
+let destinationFloor = null;
 
-      if (p === d) {
-        message.textContent =
-          "Please select a different destination floor.";
-        return;
-      }
+const currentButtons = document.querySelectorAll("#currentButtons button");
+const destinationButtons = document.querySelectorAll("#destinationButtons button");
+const destinationSection = document.getElementById("destinationSection");
+const submit = document.getElementById("submit");
+const message = document.getElementById("message");
 
-      submit.disabled = true;
-      message.textContent = "Submitting request...";
+const sessionId = sessionStorage.getItem("smartLiftSession")
+  || (crypto.randomUUID ? crypto.randomUUID() :
+      Date.now() + "-" + Math.random().toString(36).slice(2));
 
-      try {
-        const newRequest = db.ref("Requests").push();
+sessionStorage.setItem("smartLiftSession", sessionId);
 
-        await newRequest.set({
-          pickupFloor: p,
-          destinationFloor: d,
-          status: "WAITING",
-          sessionId: sessionId,
-          createdAt: firebase.database.ServerValue.TIMESTAMP
-        });
+function showMessage(text, type) {
+  message.className = "message " + type;
+  message.textContent = text;
+}
 
-        requestIds.push(newRequest.key);
-        message.textContent =
-          "Request submitted successfully. Queue ID: " + newRequest.key;
-      } catch (error) {
-        message.textContent =
-          "Firebase error: " + error.message;
-      } finally {
-        submit.disabled = false;
-      }
+function clearDestination() {
+  destinationFloor = null;
+  destinationButtons.forEach(b => b.classList.remove("selected"));
+  submit.classList.add("hidden");
+  submit.disabled = true;
+}
+
+currentButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    currentFloor = Number(button.dataset.floor);
+
+    currentButtons.forEach(b => b.classList.remove("selected"));
+    button.classList.add("selected");
+
+    destinationSection.classList.remove("hidden");
+    clearDestination();
+
+    destinationButtons.forEach(b => {
+      const floor = Number(b.dataset.floor);
+      b.disabled = floor === currentFloor;
+      b.title = floor === currentFloor ? "You are already here!" : "";
     });
 
-    db.ref("CurrentLiftFloor").on("value", snap => {
-      const floor = snap.val();
-      document.getElementById("liftFloor").textContent =
-        floor === 1 || floor === 2 || floor === 3
-          ? "Floor " + floor : "Unknown";
-    }, showError);
+    showMessage(
+      "Current floor selected: Floor " + currentFloor +
+      ". Now select your destination.",
+      "info"
+    );
+  });
+});
 
-    db.ref("LiftStatus").on("value", snap => {
-      document.getElementById("liftStatus").textContent =
-        snap.val() || "Unknown";
-    }, showError);
+destinationButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    destinationFloor = Number(button.dataset.floor);
 
-    db.ref(".info/connected").on("value", snap => {
-      document.getElementById("connection").textContent =
-        snap.val() ? "Firebase connected" : "Firebase disconnected";
-    });
-
-    // Listen to all requests and display this session's requests.
-    db.ref("Requests").on("value", snap => {
-      myRequests.innerHTML = "";
-      let found = false;
-
-      snap.forEach(child => {
-        const r = child.val();
-        if (!r || r.sessionId !== sessionId) return;
-
-        found = true;
-        const item = document.createElement("div");
-        item.className = "request";
-
-        const title = document.createElement("strong");
-        title.textContent =
-          "Floor " + r.pickupFloor + " → Floor " + r.destinationFloor;
-
-        const status = document.createElement("p");
-        status.textContent = "Status: " + (r.status || "Unknown");
-
-        const id = document.createElement("p");
-        id.className = "muted";
-        id.textContent = "Request ID: " + child.key;
-
-        item.append(title, status, id);
-        myRequests.appendChild(item);
-      });
-
-      if (!found) {
-        myRequests.textContent = "No requests submitted in this session.";
-        myRequests.className = "muted";
-      }
-    }, showError);
-
-    function showError(error) {
-      document.getElementById("connection").textContent =
-        "Firebase error: " + error.message;
+    if (destinationFloor === currentFloor) {
+      clearDestination();
+      showMessage("You are already here!", "error");
+      return;
     }
-  </script>
+
+    destinationButtons.forEach(b => b.classList.remove("selected"));
+    button.classList.add("selected");
+
+    submit.classList.remove("hidden");
+    submit.disabled = false;
+
+    showMessage(
+      "Floor " + currentFloor + " → Floor " +
+      destinationFloor + ". Ready to submit.",
+      "info"
+    );
+  });
+});
+
+submit.addEventListener("click", async () => {
+  if (currentFloor === null || destinationFloor === null) return;
+
+  if (currentFloor === destinationFloor) {
+    showMessage("You are already here!", "error");
+    return;
+  }
+
+  submit.disabled = true;
+  showMessage("Submitting your request...", "info");
+
+  try {
+    const requestRef = db.ref("Requests").push();
+
+    await requestRef.set({
+      pickupFloor: currentFloor,
+      destinationFloor: destinationFloor,
+      status: "WAITING",
+      sessionId: sessionId,
+      createdAt: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    showMessage(
+      "Request submitted successfully! Queue ID: " + requestRef.key,
+      "success"
+    );
+  } catch (error) {
+    showMessage("Firebase error: " + error.message, "error");
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+db.ref("CurrentLiftFloor").on("value", snap => {
+  const floor = snap.val();
+  document.getElementById("liftFloor").textContent =
+    [1, 2, 3].includes(floor) ? "Floor " + floor : "Unknown";
+}, firebaseError);
+
+db.ref("LiftStatus").on("value", snap => {
+  document.getElementById("liftStatus").textContent =
+    snap.val() || "Unknown";
+}, firebaseError);
+
+db.ref(".info/connected").on("value", snap => {
+  document.getElementById("connection").textContent =
+    snap.val() ? "Firebase connected" : "Firebase disconnected";
+});
+
+db.ref("Requests").on("value", snap => {
+  const list = document.getElementById("myRequests");
+  list.replaceChildren();
+  let found = false;
+
+  snap.forEach(child => {
+    const r = child.val();
+    if (!r || r.sessionId !== sessionId) return;
+
+    found = true;
+    const item = document.createElement("div");
+    item.className = "request";
+
+    const title = document.createElement("strong");
+    title.textContent =
+      "Floor " + r.pickupFloor + " → Floor " + r.destinationFloor;
+
+    const status = document.createElement("p");
+    status.textContent = "Status: " + (r.status || "Unknown");
+
+    const id = document.createElement("p");
+    id.className = "small";
+    id.textContent = "Queue ID: " + child.key;
+
+    item.append(title, status, id);
+    list.appendChild(item);
+  });
+
+  if (!found) list.textContent = "No requests submitted in this session.";
+}, firebaseError);
+
+function firebaseError(error) {
+  document.getElementById("connection").textContent =
+    "Firebase error: " + error.message;
+}
+</script>
+
 </body>
 </html>
