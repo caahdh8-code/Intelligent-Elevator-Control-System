@@ -2,767 +2,236 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Intelligent Elevator</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intelligent Elevator Control System</title>
 <style>
-* {
-    box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+  margin:0;padding:24px 14px;min-height:100vh;
+  font-family:Arial,sans-serif;color:#f4fbff;
+  background:linear-gradient(145deg,#06172e,#07517b,#031126);
 }
-
-body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: Arial, sans-serif;
-    color: #f4fbff;
-    background:
-        radial-gradient(ellipse at 50% 10%, rgba(0,160,255,.22), transparent 45%),
-        linear-gradient(135deg, #031126, #06264a 55%, #03152e);
-    padding: 30px 15px;
+main{max-width:800px;margin:auto}
+header{text-align:center;margin:20px 0 30px}
+h1{color:#20dcff;font-size:clamp(27px,5vw,40px)}
+.panel{
+  background:rgba(15,62,103,.8);border:1px solid #20cfff;
+  border-radius:18px;padding:24px;margin-bottom:20px;
 }
-
-.app {
-    max-width: 920px;
-    margin: auto;
+h2{color:#20dcff}
+.small{color:#c4dced;line-height:1.5}
+#connection{color:#ffcc66}
+.page{display:none}
+.page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+button{
+  min-height:85px;padding:12px 5px;border-radius:13px;
+  border:2px solid #20cfff;color:white;
+  background:#075d9e;font-size:16px;font-weight:bold;cursor:pointer;
 }
-
-header {
-    text-align: center;
-    margin: 15px 0 30px;
-}
-
-h1 {
-    color: #19d8ff;
-    font-size: clamp(2rem, 5vw, 3rem);
-    text-shadow: 0 0 22px rgba(0,210,255,.35);
-}
-
-.subtitle {
-    font-size: 1.2rem;
-}
-
-.status-card, .panel, .message-card {
-    background: rgba(18,67,111,.55);
-    border: 1px solid rgba(41,197,255,.55);
-    border-radius: 20px;
-    padding: 25px;
-    margin-bottom: 25px;
-    box-shadow: 0 12px 35px rgba(0,0,0,.2);
-}
-
-.status-title, .eyebrow {
-    color: #19d8ff;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-.status-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px 30px;
-    color: #b8d8ef;
-}
-
-.status-grid strong {
-    color: white;
-}
-
-#connection {
-    color: #25e6c0;
-}
-
-.steps {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 580px;
-    margin: 25px auto 35px;
-}
-
-.step {
-    width: 45%;
-    text-align: center;
-    color: #8db8d8;
-}
-
-.bubble {
-    width: 48px;
-    height: 48px;
-    border: 3px solid #397ba8;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    margin: auto auto 8px;
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-
-.step.active {
-    color: #19d8ff;
-    font-weight: bold;
-}
-
-.step.active .bubble {
-    border-color: #19d8ff;
-    background: #087ab9;
-    box-shadow: 0 0 18px rgba(25,216,255,.55);
-}
-
-.step.done .bubble {
-    border-color: #25e6c0;
-    color: #25e6c0;
-}
-
-.step-line {
-    height: 3px;
-    flex: 1;
-    background: linear-gradient(90deg, #367ba9, #19d8ff);
-    margin-bottom: 25px;
-}
-
-.page {
-    display: none;
-    animation: fade .3s ease;
-}
-
-.page.active {
-    display: block;
-}
-
-@keyframes fade {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-h2 {
-    margin-bottom: 12px;
-}
-
-.hint {
-    color: #b8d8ef;
-    line-height: 1.5;
-    margin-bottom: 25px;
-}
-
-.floor-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-}
-
-button {
-    cursor: pointer;
-    color: white;
-    border: 2px solid #19cfff;
-    border-radius: 15px;
-    background: linear-gradient(145deg, #0876bd, #0752a3);
-    min-height: 100px;
-    padding: 15px 10px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    transition: .2s;
-}
-
-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 0 22px rgba(25,216,255,.35);
-}
-
-.floor-number {
-    display: block;
-    font-size: 1.4rem;
-    margin-bottom: 5px;
-}
-
-.floor-sub {
-    display: block;
-    font-size: .75rem;
-    font-weight: normal;
-}
-
-.selection {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 18px;
-    margin-bottom: 25px;
-    border: 1px solid #25e6c0;
-    border-radius: 15px;
-}
-
-.check {
-    width: 48px;
-    height: 48px;
-    border: 3px solid #25e6c0;
-    color: #25e6c0;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-size: 1.5rem;
-}
-
-.selection small {
-    display: block;
-    color: #b8d8ef;
-    margin-bottom: 5px;
-}
-
-.selection strong {
-    color: #19d8ff;
-    font-size: 1.3rem;
-}
-
-.actions {
-    display: flex;
-    justify-content: center;
-    margin-top: 25px;
-}
-
-.secondary {
-    min-height: 55px;
-    min-width: 170px;
-    background: rgba(28,72,111,.55);
-    border: 1px solid #5795bf;
-}
-
-.message-card {
-    text-align: center;
-    padding: 40px 25px;
-}
-
-.result-icon {
-    width: 75px;
-    height: 75px;
-    display: grid;
-    place-items: center;
-    margin: auto auto 20px;
-    border-radius: 50%;
-    font-size: 2.2rem;
-}
-
-.success {
-    border: 3px solid #25e6c0;
-    color: #25e6c0;
-}
-
-.wait {
-    border: 3px solid #19d8ff;
-    color: #19d8ff;
-}
-
-.error {
-    border: 3px solid #ff667d;
-    color: #ff667d;
-}
-
-.result-title {
-    font-size: 1.8rem;
-    margin-bottom: 15px;
-}
-
-.result-title.success {
-    color: #25e6c0;
-}
-
-.result-title.wait {
-    color: #19d8ff;
-}
-
-.result-title.error {
-    color: #ff667d;
-}
-
-.result-text {
-    color: #b8d8ef;
-    line-height: 1.6;
-}
-
-.trip-summary {
-    margin: 22px auto;
-    padding: 15px;
-    max-width: 440px;
-    border-radius: 12px;
-    background: rgba(2,19,42,.5);
-    color: #b8d8ef;
-    line-height: 1.8;
-}
-
-.trip-summary strong {
-    color: white;
-}
-
-.small-note {
-    color: #91b7d3;
-    font-size: .85rem;
-    margin-top: 15px;
-}
-
-.hidden {
-    display: none !important;
-}
-
-@media(max-width:560px) {
-    .floor-grid {
-        gap: 8px;
-    }
-
-    button {
-        font-size: .9rem;
-        padding: 10px 5px;
-        min-height: 85px;
-    }
-
-    .floor-number {
-        font-size: 1.2rem;
-    }
-
-    .status-grid {
-        display: grid;
-    }
-}
+button:hover{background:#087dbb}
+button:disabled{opacity:.5;cursor:not-allowed}
+.floor{display:block;font-size:20px;margin-bottom:6px}
+.actions{text-align:center;margin-top:20px}
+.back{min-height:48px;min-width:140px;background:#34516c}
+.selection{padding:14px;background:#092b4b;border-radius:12px;margin:15px 0}
+.selection strong{color:#20dcff}
+.result{text-align:center;padding:25px 10px}
+#resultTitle{color:#20dcff}
+#resultText{color:#d0e8f5;line-height:1.6}
+#requestStatus{color:#25e6bd;font-weight:bold}
+@media(max-width:420px){.grid{gap:7px}button{font-size:13px}}
 </style>
 </head>
-
 <body>
-
-<main class="app">
-
+<main>
 <header>
-    <h1>INTELLIGENT ELEVATOR</h1>
-    <p class="subtitle">Contactless Elevator Control System</p>
+<h1>INTELLIGENT ELEVATOR</h1>
+<p>Contactless Elevator Control System</p>
 </header>
 
-<section class="status-card">
-    <div class="status-title">LIFT INFORMATION</div>
-
-    <div class="status-grid">
-        <div>Actual Floor: <strong id="actualFloor">Unknown</strong></div>
-        <div>Lift Status: <strong id="liftStatus">IDLE</strong></div>
-        <div>Connection: <strong id="connection">CONNECTING</strong></div>
-    </div>
+<section class="panel">
+<h2>System Information</h2>
+<p>Firebase Connection: <strong id="connection">CONNECTING</strong></p>
+<p>Queue System: <strong id="queueStatus">READY</strong></p>
 </section>
 
-<div class="steps">
-
-    <div class="step active" id="step1">
-        <div class="bubble">1</div>
-        <div>Select Current Floor</div>
-    </div>
-
-    <div class="step-line"></div>
-
-    <div class="step" id="step2">
-        <div class="bubble">2</div>
-        <div>Select Destination Floor</div>
-    </div>
-
+<!-- PAGE 1 -->
+<section class="panel page active" id="page1">
+<h2>SELECT CURRENT FLOOR</h2>
+<p class="small">Please select your current floor.</p>
+<div class="grid">
+<button onclick="selectCurrent(1)"><span class="floor">1</span>FLOOR 1</button>
+<button onclick="selectCurrent(2)"><span class="floor">2</span>FLOOR 2</button>
+<button onclick="selectCurrent(3)"><span class="floor">3</span>FLOOR 3</button>
 </div>
-
-<!-- PAGE 1: SELECT CURRENT FLOOR -->
-
-<section class="page active" id="page1">
-
-    <div class="panel">
-
-        <p class="eyebrow">STEP 1 OF 2</p>
-
-        <h2>SELECT CURRENT FLOOR</h2>
-
-        <p class="hint">
-            Please select the floor where you are currently waiting for the lift.
-        </p>
-
-        <div class="floor-grid">
-
-            <button onclick="chooseCurrent(1)">
-                <span class="floor-number">FLOOR 1</span>
-                <span class="floor-sub">Select current floor</span>
-            </button>
-
-            <button onclick="chooseCurrent(2)">
-                <span class="floor-number">FLOOR 2</span>
-                <span class="floor-sub">Select current floor</span>
-            </button>
-
-            <button onclick="chooseCurrent(3)">
-                <span class="floor-number">FLOOR 3</span>
-                <span class="floor-sub">Select current floor</span>
-            </button>
-
-        </div>
-
-    </div>
-
 </section>
 
-
-<!-- PAGE 2: SELECT DESTINATION FLOOR -->
-
-<section class="page" id="page2">
-
-    <div class="panel">
-
-        <p class="eyebrow">STEP 2 OF 2</p>
-
-        <div class="selection">
-
-            <div class="check">✓</div>
-
-            <div>
-                <small>CURRENT FLOOR SELECTED:</small>
-                <strong id="currentFloorLabel">FLOOR 1</strong>
-            </div>
-
-        </div>
-
-        <h2>SELECT DESTINATION FLOOR</h2>
-
-        <p class="hint">
-            Please select your destination floor.
-        </p>
-
-        <div class="floor-grid">
-
-            <button id="destination1" onclick="chooseDestination(1)">
-                <span class="floor-number">FLOOR 1</span>
-            </button>
-
-            <button id="destination2" onclick="chooseDestination(2)">
-                <span class="floor-number">FLOOR 2</span>
-            </button>
-
-            <button id="destination3" onclick="chooseDestination(3)">
-                <span class="floor-number">FLOOR 3</span>
-            </button>
-
-        </div>
-
-        <div class="actions">
-            <button class="secondary" onclick="showPage(1)">
-                ← BACK
-            </button>
-        </div>
-
-    </div>
-
+<!-- PAGE 2 -->
+<section class="panel page" id="page2">
+<h2>SELECT DESTINATION FLOOR</h2>
+<div class="selection">
+Current Floor: <strong id="currentSelected"></strong>
+</div>
+<p class="small">Please select your destination floor.</p>
+<div class="grid">
+<button onclick="selectDestination(1)">FLOOR 1</button>
+<button onclick="selectDestination(2)">FLOOR 2</button>
+<button onclick="selectDestination(3)">FLOOR 3</button>
+</div>
+<div class="actions">
+<button class="back" onclick="showPage(1)">BACK</button>
+</div>
 </section>
 
-
-<!-- PAGE 3: RESULT -->
-
-<section class="page" id="page3">
-
-    <div class="message-card">
-
-        <div id="resultIcon" class="result-icon success">✓</div>
-
-        <h2 id="resultTitle" class="result-title success">
-            You are already here!
-        </h2>
-
-        <p id="resultText" class="result-text">
-            Your current floor and destination floor are the same.
-        </p>
-
-        <div class="trip-summary">
-
-            Current Floor:
-            <strong id="summaryCurrent">FLOOR 1</strong>
-            <br>
-
-            Destination Floor:
-            <strong id="summaryDestination">FLOOR 1</strong>
-
-            <div id="queueInfo" class="hidden">
-                Queue ID: <strong id="queueId"></strong>
-            </div>
-
-        </div>
-
-        <div class="small-note" id="resultNote"></div>
-
-        <div class="actions">
-            <button class="secondary" onclick="startAgain()">
-                NEW REQUEST
-            </button>
-        </div>
-
-    </div>
-
+<!-- PAGE 3 -->
+<section class="panel page result" id="page3">
+<h2 id="resultTitle">Please wait for your lift.</h2>
+<p id="resultText"></p>
+<div class="selection">
+<p>Current Floor: <strong id="resultCurrent"></strong></p>
+<p>Destination Floor: <strong id="resultDestination"></strong></p>
+<p>Request Status: <strong id="requestStatus">WAITING</strong></p>
+</div>
+<p class="small" id="resultMessage"></p>
+<button onclick="newRequest()">NEW REQUEST</button>
 </section>
-
 </main>
-
-
-<!-- FIREBASE -->
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-
-// FIREBASE CONFIGURATION
-
 const firebaseConfig = {
-    databaseURL: "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app"
+  databaseURL:
+  "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
-let database = null;
-let currentFloor = null;
-let destinationFloor = null;
-let requestInProgress = false;
+let db;
+let currentFloor = 0;
+let sending = false;
+let activeRequestRef = null;
 
-const $ = (id) => document.getElementById(id);
-
-
-// PAGE NAVIGATION
-
-function showPage(pageNumber) {
-
-    [1, 2, 3].forEach(n => {
-        $("page" + n).classList.toggle("active", n === pageNumber);
-    });
-
-    $("step1").classList.toggle("active", pageNumber === 1);
-    $("step1").classList.toggle("done", pageNumber > 1);
-
-    $("step2").classList.toggle("active", pageNumber === 2);
-    $("step2").classList.toggle("done", pageNumber === 3);
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
+function showPage(page){
+  [1,2,3].forEach(n=>{
+    document.getElementById("page"+n).classList.toggle("active",n===page);
+  });
+  window.scrollTo(0,0);
 }
 
-
-// PAGE 1: CURRENT FLOOR
-
-function chooseCurrent(floor) {
-
-    currentFloor = floor;
-    destinationFloor = null;
-
-    $("currentFloorLabel").textContent = "FLOOR " + floor;
-
-    [1, 2, 3].forEach(n => {
-
-        const button = $("destination" + n);
-
-        button.innerHTML = n === floor
-            ? '<span class="floor-number">FLOOR ' + n +
-              '</span><span class="floor-sub">SAME AS CURRENT FLOOR</span>'
-            : '<span class="floor-number">FLOOR ' + n + '</span>';
-
-    });
-
-    showPage(2);
+function selectCurrent(floor){
+  currentFloor = floor;
+  document.getElementById("currentSelected").textContent="FLOOR "+floor;
+  showPage(2);
 }
 
+function selectDestination(floor){
+  if(sending) return;
 
-// PAGE 2: DESTINATION FLOOR
-
-async function chooseDestination(floor) {
-
-    if (currentFloor === null || requestInProgress) {
-        return;
-    }
-
-    destinationFloor = floor;
-
-    $("summaryCurrent").textContent = "FLOOR " + currentFloor;
-    $("summaryDestination").textContent = "FLOOR " + destinationFloor;
-
-    $("queueInfo").classList.add("hidden");
-    $("resultNote").textContent = "";
-
-
-    // IF CURRENT FLOOR = DESTINATION FLOOR
-
-    if (currentFloor === destinationFloor) {
-
-        showResult(
-            "success",
-            "✓",
-            "You are already here!",
-            "Your current floor and destination floor are the same."
-        );
-
-        showPage(3);
-        return;
-    }
-
-
-    // IF CURRENT FLOOR IS DIFFERENT FROM DESTINATION FLOOR
-
-    showResult(
-        "wait",
-        "↗",
-        "Please wait for your lift.",
-        "Your request is being submitted. Please wait while the lift request is processed."
-    );
-
+  if(floor===currentFloor){
+    document.getElementById("resultTitle").textContent=
+      "You are already here!";
+    document.getElementById("resultText").textContent=
+      "Your current floor and destination floor are the same.";
+    document.getElementById("resultCurrent").textContent="FLOOR "+currentFloor;
+    document.getElementById("resultDestination").textContent="FLOOR "+floor;
+    document.getElementById("requestStatus").textContent="NOT SUBMITTED";
+    document.getElementById("resultMessage").textContent="";
     showPage(3);
+    return;
+  }
 
-
-    if (!database) {
-
-        showResult(
-            "error",
-            "!",
-            "Connection error",
-            "The website is not connected to Firebase. Please check your internet connection."
-        );
-
-        return;
-    }
-
-
-    // SEND REQUEST TO FIREBASE QUEUE
-
-    requestInProgress = true;
-
-    try {
-
-        const queueRef = database.ref("Elevator/Queue").push();
-
-        const requestData = {
-
-            currentFloor: currentFloor,
-            destinationFloor: destinationFloor,
-            status: "WAITING",
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-
-        };
-
-        await queueRef.set(requestData);
-
-        $("queueId").textContent = queueRef.key;
-        $("queueInfo").classList.remove("hidden");
-
-        $("resultNote").textContent =
-            "Request submitted successfully. Your request has been added to the lift queue.";
-
-    }
-
-    catch (error) {
-
-        console.error("Firebase Queue Error:", error);
-
-        showResult(
-            "error",
-            "!",
-            "Request not submitted",
-            "Unable to send your request to Firebase. Please check the database connection or database rules."
-        );
-
-    }
-
-    finally {
-
-        requestInProgress = false;
-
-    }
-
+  submitRequest(floor);
 }
 
+async function submitRequest(destinationFloor){
+  if(!db){
+    alert("Firebase is not connected.");
+    return;
+  }
 
-// RESULT PAGE
+  sending=true;
+  document.getElementById("resultTitle").textContent="Please wait for your lift.";
+  document.getElementById("resultText").textContent=
+    "Your elevator request is being submitted.";
+  document.getElementById("resultCurrent").textContent="FLOOR "+currentFloor;
+  document.getElementById("resultDestination").textContent="FLOOR "+destinationFloor;
+  document.getElementById("requestStatus").textContent="SUBMITTING";
+  document.getElementById("resultMessage").textContent="";
+  showPage(3);
 
-function showResult(type, icon, title, message) {
+  try{
+    activeRequestRef=db.ref("Elevator/Queue").push();
 
-    $("resultIcon").className = "result-icon " + type;
-    $("resultIcon").textContent = icon;
+    await activeRequestRef.set({
+      currentFloor:currentFloor,
+      destinationFloor:destinationFloor,
+      status:"WAITING",
+      createdAt:firebase.database.ServerValue.TIMESTAMP
+    });
 
-    $("resultTitle").className = "result-title " + type;
-    $("resultTitle").textContent = title;
+    document.getElementById("requestStatus").textContent="WAITING";
+    document.getElementById("resultMessage").textContent=
+      "Request submitted successfully. Please wait for the elevator.";
 
-    $("resultText").textContent = message;
+    activeRequestRef.child("status").on("value",snapshot=>{
+      const status=snapshot.val() || "WAITING";
+      document.getElementById("requestStatus").textContent=status;
 
+      if(status==="PROCESSING"){
+        document.getElementById("resultTitle").textContent="Your lift is on the way.";
+        document.getElementById("resultMessage").textContent=
+          "Your request is currently being processed.";
+      }
+
+      if(status==="COMPLETED"){
+        document.getElementById("resultTitle").textContent="Request completed!";
+        document.getElementById("resultMessage").textContent=
+          "The elevator sequence has finished.";
+      }
+
+      if(status==="ERROR"){
+        document.getElementById("resultTitle").textContent="Request error";
+        document.getElementById("resultMessage").textContent=
+          "Please contact the system operator.";
+      }
+    });
+
+  }catch(error){
+    console.error(error);
+    document.getElementById("resultTitle").textContent="Request failed";
+    document.getElementById("resultMessage").textContent=error.message;
+  }finally{
+    sending=false;
+  }
 }
 
-
-// NEW REQUEST
-
-function startAgain() {
-
-    currentFloor = null;
-    destinationFloor = null;
-    requestInProgress = false;
-
-    $("queueInfo").classList.add("hidden");
-    $("queueId").textContent = "";
-
-    showPage(1);
-
+function newRequest(){
+  if(activeRequestRef){
+    activeRequestRef.child("status").off();
+    activeRequestRef=null;
+  }
+  currentFloor=0;
+  showPage(1);
 }
 
+window.addEventListener("load",()=>{
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.database();
 
-// FIREBASE CONNECTION
-
-function connectFirebase() {
-
-    try {
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-
-        database = firebase.database();
-
-        $("connection").textContent = "CONNECTED";
-        $("connection").style.color = "#25e6c0";
-
-
-        // READ ACTUAL FLOOR
-
-        database.ref("Elevator/actualFloor").on("value", snapshot => {
-
-            const value = snapshot.val();
-
-            $("actualFloor").textContent =
-                value === null
-                ? "Unknown"
-                : (typeof value === "number" ? "FLOOR " + value : value);
-
-        });
-
-
-        // READ LIFT STATUS
-
-        database.ref("Elevator/liftStatus").on("value", snapshot => {
-
-            $("liftStatus").textContent = snapshot.val() || "IDLE";
-
-        });
-
-    }
-
-    catch (error) {
-
-        console.error("Firebase Error:", error);
-
-        database = null;
-
-        $("connection").textContent = "DISCONNECTED";
-        $("connection").style.color = "#ff667d";
-
-    }
-
-}
-
-
-// START WEBSITE
-
-window.addEventListener("load", connectFirebase);
-
+    db.ref(".info/connected").on("value",snapshot=>{
+      const connected=snapshot.val()===true;
+      document.getElementById("connection").textContent=
+        connected?"CONNECTED":"DISCONNECTED";
+      document.getElementById("connection").style.color=
+        connected?"#25e6bd":"#ff6677";
+    });
+  }catch(error){
+    document.getElementById("connection").textContent="ERROR";
+    console.error(error);
+  }
+});
 </script>
-
 </body>
 </html>
