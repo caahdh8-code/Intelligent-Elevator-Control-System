@@ -1,220 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Intelligent Elevator</title>
-
-<style>
-:root {
-  --bg:#063453; --panel:#07466c; --cyan:#36e6e8;
-  --blue:#078fd8; --white:#fff; --muted:#c4dce9;
-  --green:#35e69b; --red:#ff6578;
-}
-* {box-sizing:border-box}
-body {
-  margin:0; min-height:100vh; font-family:Arial,Helvetica,sans-serif;
-  color:var(--white);
-  background:radial-gradient(ellipse at top,#12618a 0%,transparent 55%),
-  linear-gradient(135deg,#075075,#062943 65%,#041e35);
-}
-header {text-align:center;padding:35px 15px 25px}
-header h1 {
-  font-size:clamp(30px,5vw,65px);color:var(--cyan);
-  letter-spacing:3px;margin:5px 0 12px;font-weight:800;
-  text-shadow:0 0 15px #20c9d955;
-}
-header p {font-size:clamp(13px,2vw,21px);font-weight:bold;margin:0}
-.container {max-width:1200px;margin:auto;padding:15px 25px 50px}
-.panel {
-  background:rgba(4,49,79,.85);
-  border:1.5px solid rgba(54,230,232,.55);
-  border-radius:24px;padding:35px;box-shadow:0 8px 30px #0003;
-}
-.panel h2 {color:var(--cyan);font-size:28px;margin:0 0 15px}
-.subtitle {color:var(--muted);font-size:17px}
-.floor-grid {
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:22px;margin-top:30px;
-}
-.floor-btn {
-  min-height:155px;border-radius:22px;border:2px solid #43d9e9;
-  background:linear-gradient(135deg,#0a9edb,#0876bf);
-  color:white;cursor:pointer;font-size:34px;font-weight:bold;transition:.25s;
-}
-.floor-btn span {display:block;font-size:19px;margin-top:12px}
-.floor-btn:hover {
-  transform:translateY(-5px);
-  background:linear-gradient(135deg,#17c5ed,#087dc7);
-  box-shadow:0 0 20px #25d8ed66;
-}
-.hidden {display:none!important}
-.current-label {
-  display:inline-block;padding:12px 20px;background:#0a6684;
-  border:1px solid var(--cyan);border-radius:12px;margin:10px 0;font-weight:bold;
-}
-.result {
-  margin-top:25px;padding:18px;border-radius:13px;
-  background:#082e48;line-height:1.7;border:1px solid var(--cyan);
-  white-space:pre-wrap;
-}
-.result.success {border-color:var(--green)}
-.result.error {border-color:var(--red)}
-.action-btn {
-  background:#087dc5;color:white;border:0;border-radius:10px;
-  padding:12px 22px;cursor:pointer;font-weight:bold;margin-top:20px;
-}
-
-/* AI ASSISTANT */
-.ai-toggle {
-  position:fixed;right:15px;top:50%;transform:translateY(-50%);
-  z-index:1001;background:var(--cyan);color:#05334c;border:0;
-  border-radius:35px;padding:20px 13px;font-size:17px;font-weight:bold;
-  cursor:pointer;box-shadow:0 5px 25px #0005;writing-mode:vertical-rl;
-}
-.ai-window {
-  position:fixed;right:78px;top:50%;transform:translateY(-50%);
-  width:370px;max-width:calc(100vw - 100px);height:min(560px,82vh);
-  background:#073552;border:2px solid #27d9e9;border-radius:22px;
-  z-index:1000;display:flex;flex-direction:column;
-  box-shadow:0 10px 40px #0008;overflow:hidden;
-}
-.ai-header {
-  padding:17px;background:linear-gradient(135deg,#087bb6,#075b8d);
-  display:flex;align-items:center;justify-content:space-between;
-  font-weight:bold;font-size:18px;
-}
-.ai-close {
-  background:transparent;border:1px solid var(--cyan);color:white;
-  border-radius:50%;width:38px;height:38px;font-size:22px;cursor:pointer;
-}
-.chat-box {flex:1;padding:15px;overflow-y:auto;background:#062a43}
-.message {
-  padding:12px 15px;margin:10px 0;border-radius:15px;max-width:92%;
-  line-height:1.5;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;
-}
-.ai-message {background:#174b69;border-bottom-left-radius:3px}
-.user-message {background:#087fc4;margin-left:auto;border-bottom-right-radius:3px}
-.ai-input-area {background:#07466a;padding:12px;border-top:1px solid #2b809f}
-.input-row {display:flex;gap:7px;align-items:center}
-.chat-input {
-  flex:1;min-width:0;padding:13px;border-radius:10px;
-  border:1px solid #47cde1;outline:none;background:white;color:#123;font-size:14px;
-}
-.send-btn,.tool-btn {
-  border:0;border-radius:10px;padding:12px;cursor:pointer;
-  font-weight:bold;color:white;background:#079bd3;
-}
-.send-btn:disabled {opacity:.6;cursor:not-allowed}
-.tool-btn {background:#17698e;font-size:14px}
-.tool-btn.recording {background:#c52c43}
-.ai-tools {display:flex;gap:8px;margin-top:9px}
-.ai-tools button {flex:1}
-.voice-language {
-  width:100%;margin-top:9px;padding:9px;border-radius:9px;
-  border:1px solid #47cde1;background:#062f49;color:white;
-  font-size:13px;
-}
-.ai-hint {font-size:11px;color:#b9d6e5;margin:7px 0 0}
-
-@media(max-width:650px) {
-  header {padding:25px 10px}
-  .container {padding:10px 12px 35px}
-  .panel {padding:20px 15px;border-radius:17px}
-  .panel h2 {font-size:21px}
-  .floor-grid {gap:9px}
-  .floor-btn {min-height:105px;font-size:25px;border-radius:13px}
-  .floor-btn span {font-size:13px}
-  .ai-toggle {right:7px;padding:15px 9px;font-size:14px}
-  .ai-window {right:55px;width:calc(100vw - 75px);max-width:none;height:75vh}
-}
-</style>
-</head>
-
-<body>
-
-<header>
-  <h1>INTELLIGENT ELEVATOR</h1>
-  <p>SMART CONTACTLESS ELEVATOR CONTROL</p>
-</header>
-
-<main class="container">
-  <section class="panel" id="currentPage">
-    <h2>SELECT CURRENT FLOOR</h2>
-    <p class="subtitle">Please select your current location.</p>
-
-    <div class="floor-grid">
-      <button class="floor-btn" onclick="selectCurrent(1)">1 <span>FLOOR 1</span></button>
-      <button class="floor-btn" onclick="selectCurrent(2)">2 <span>FLOOR 2</span></button>
-      <button class="floor-btn" onclick="selectCurrent(3)">3 <span>FLOOR 3</span></button>
-    </div>
-  </section>
-
-  <section class="panel hidden" id="destinationPage">
-    <h2>SELECT DESTINATION FLOOR</h2>
-    <p class="subtitle">Your current location:</p>
-    <div class="current-label" id="currentDisplay">FLOOR 1</div>
-    <p class="subtitle">Please select your destination.</p>
-
-    <div class="floor-grid" id="destinationButtons">
-      <button class="floor-btn" onclick="selectDestination(1)">1 <span>FLOOR 1</span></button>
-      <button class="floor-btn" onclick="selectDestination(2)">2 <span>FLOOR 2</span></button>
-      <button class="floor-btn" onclick="selectDestination(3)">3 <span>FLOOR 3</span></button>
-    </div>
-
-    <div id="liftResult" class="result hidden"></div>
-    <button class="action-btn" onclick="backToCurrent()">← BACK</button>
-  </section>
-</main>
-
-<button class="ai-toggle" onclick="toggleAI()">✦ AI Assistant</button>
-
-<div class="ai-window hidden" id="aiWindow">
-  <div class="ai-header">
-    <span>✦ Hotel AI Assistant</span>
-    <button class="ai-close" onclick="toggleAI()">×</button>
-  </div>
-
-  <div class="chat-box" id="chatBox">
-    <div class="message ai-message">Hello! Welcome to our Smart Hotel.
-
-You can ask me in English or Bahasa Melayu.
-
-Examples:
-• Where is the cafe?
-• Gym kat mana?
-• Where are the guest rooms?
-• Swimming pool dekat tingkat berapa?
-• Please send the lift to Floor 3.
-• Saya nak pergi ke restoran.
-
-You can type your question or use voice input.</div>
-  </div>
-
-  <div class="ai-input-area">
-    <div class="input-row">
-      <input type="text" id="chatInput" class="chat-input"
-        placeholder="Ask me anything..."
-        onkeydown="if(event.key==='Enter') sendMessage()">
-      <button class="send-btn" id="sendButton" onclick="sendMessage()">SEND</button>
-    </div>
-
-    <select class="voice-language" id="voiceLanguage">
-      <option value="ms-MY">Voice Language: Bahasa Melayu</option>
-      <option value="en-US">Voice Language: English</option>
-    </select>
-
-    <div class="ai-tools">
-      <button class="tool-btn" id="voiceButton" onclick="startVoice()">🎤 START VOICE</button>
-      <button class="tool-btn" onclick="stopVoice()">■ STOP</button>
-    </div>
-
-    <p class="ai-hint" id="voiceStatus">
-      Select your voice language and press START VOICE.
-    </p>
-  </div>
-</div>
-
 <script>
 // ======================================
 // CONFIGURATION
@@ -235,6 +18,81 @@ let chatHistory = [];
 let pendingLiftRequest = null;
 let isSendingMessage = false;
 let isListening = false;
+let waitingForCurrentFloor = false;
+
+// ======================================
+// HOTEL FACILITY DIRECTORY
+// ======================================
+
+const FACILITY_FLOORS = {
+  // FLOOR 1
+  "main entrance": 1,
+  "entrance": 1,
+  "pintu masuk": 1,
+  "lobby": 1,
+  "reception": 1,
+  "front desk": 1,
+  "kaunter": 1,
+  "waiting lounge": 1,
+  "lounge": 1,
+  "restaurant": 1,
+  "restoran": 1,
+  "makan": 1,
+  "cafe": 1,
+  "café": 1,
+  "kafe": 1,
+  "meeting room": 1,
+  "bilik meeting": 1,
+  "bilik mesyuarat": 1,
+  "hotel office": 1,
+  "office": 1,
+  "pejabat": 1,
+  "public toilet": 1,
+  "toilet": 1,
+  "tandas": 1,
+
+  // FLOOR 2
+  "standard room": 2,
+  "standard": 2,
+  "bilik standard": 2,
+  "deluxe room": 2,
+  "deluxe": 2,
+  "bilik deluxe": 2,
+  "twin room": 2,
+  "twin": 2,
+  "bilik twin": 2,
+  "family room": 2,
+  "family": 2,
+  "bilik family": 2,
+  "housekeeping room": 2,
+  "housekeeping": 2,
+  "laundry room": 2,
+  "laundry": 2,
+  "dobi": 2,
+  "guest lounge": 2,
+
+  // FLOOR 3
+  "swimming pool": 3,
+  "swimming": 3,
+  "pool": 3,
+  "kolam": 3,
+  "kolam renang": 3,
+  "gymnasium": 3,
+  "gym": 3,
+  "gim": 3,
+  "spa and massage": 3,
+  "spa": 3,
+  "massage": 3,
+  "urut": 3,
+  "sauna": 3,
+  "rooftop restaurant": 3,
+  "rooftop": 3,
+  "sky lounge": 3,
+  "kids playroom": 3,
+  "playroom": 3,
+  "kids room": 3,
+  "bilik kanak kanak": 3
+};
 
 // ======================================
 // CURRENT FLOOR
@@ -253,7 +111,20 @@ function selectCurrent(floor) {
   result.classList.add("hidden");
   result.textContent = "";
 
-  window.scrollTo({top:0,behavior:"smooth"});
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function updateCurrentFloor(floor) {
+  floor = Number(floor);
+
+  if (![1, 2, 3].includes(floor)) return false;
+
+  currentFloor = floor;
+
+  document.getElementById("currentDisplay").textContent =
+    "FLOOR " + floor;
+
+  return true;
 }
 
 // ======================================
@@ -276,7 +147,10 @@ async function selectDestination(floor) {
   result.textContent = "Please wait for the lift. Sending request...";
 
   try {
-    const queueId = await sendLiftRequest(currentFloor,destinationFloor);
+    const queueId = await sendLiftRequest(
+      currentFloor,
+      destinationFloor
+    );
 
     result.className = "result success";
     result.textContent =
@@ -285,8 +159,9 @@ async function selectDestination(floor) {
       "Destination Floor: " + destinationFloor + "\n\n" +
       "Please wait for the lift.\nRequest ID: " + queueId;
 
-  } catch(error) {
+  } catch (error) {
     console.error(error);
+
     result.className = "result error";
     result.textContent = "Unable to send request. Please try again.";
   }
@@ -296,11 +171,12 @@ async function selectDestination(floor) {
 // FIREBASE QUEUE
 // ======================================
 
-async function sendLiftRequest(current,destination) {
+async function sendLiftRequest(current, destination) {
   current = Number(current);
   destination = Number(destination);
 
-  if (![1,2,3].includes(current) || ![1,2,3].includes(destination)) {
+  if (![1, 2, 3].includes(current) ||
+      ![1, 2, 3].includes(destination)) {
     throw new Error("Invalid floor selection.");
   }
 
@@ -318,9 +194,11 @@ async function sendLiftRequest(current,destination) {
   const response = await fetch(
     `${FIREBASE_DB_URL}/${QUEUE_PATH}.json`,
     {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(request)
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(request)
     }
   );
 
@@ -348,7 +226,7 @@ function backToCurrent() {
   document.getElementById("destinationPage").classList.add("hidden");
   document.getElementById("currentPage").classList.remove("hidden");
 
-  window.scrollTo({top:0,behavior:"smooth"});
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ======================================
@@ -359,7 +237,7 @@ function toggleAI() {
   document.getElementById("aiWindow").classList.toggle("hidden");
 }
 
-function addMessage(message,sender) {
+function addMessage(message, sender) {
   const box = document.getElementById("chatBox");
   const div = document.createElement("div");
 
@@ -369,65 +247,221 @@ function addMessage(message,sender) {
       : "message ai-message";
 
   div.textContent = message;
+
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 
 // ======================================
-// TEXT HELPERS
+// TEXT NORMALISATION
 // ======================================
 
 function normaliseText(text) {
-  return String(text || "").toLowerCase().trim()
-    .replace(/[.,!?;:]+/g," ")
-    .replace(/\s+/g," ");
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .replace(/[.,!?;:()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function isConfirmation(text) {
-  const t = normaliseText(text);
+// ======================================
+// MALAY SHORTFORM NORMALISATION
+// ======================================
 
-  const exactYes = [
-    "yes","yeah","yep","y","ya","ye","betul","benar",
-    "sah","sahkan","setuju","saya setuju","saya sahkan",
-    "okay","ok","confirm","confirmed","i confirm",
-    "i agree","i approve","approved","agreed",
-    "boleh","teruskan","hantar"
+function expandMalayShortform(text) {
+  let t = normaliseText(text);
+
+  const replacements = [
+    [/\bsy\b/g, "saya"],
+    [/\baku\b/g, "saya"],
+    [/\bko\b/g, "awak"],
+    [/\bkau\b/g, "awak"],
+    [/\bdye\b/g, "dia"],
+    [/\bdiaorg\b/g, "mereka"],
+    [/\bdorg\b/g, "mereka"],
+    [/\bkt\b/g, "kat"],
+    [/\bkat\b/g, "di"],
+    [/\bdkt\b/g, "di"],
+    [/\bskrg\b/g, "sekarang"],
+    [/\bskang\b/g, "sekarang"],
+    [/\bsekarang\b/g, "sekarang"],
+    [/\bnk\b/g, "nak"],
+    [/\bnek\b/g, "nak"],
+    [/\bpegi\b/g, "pergi"],
+    [/\bpi\b/g, "pergi"],
+    [/\bgi\b/g, "pergi"],
+    [/\bbawak\b/g, "bawa"],
+    [/\bbwok\b/g, "bawa"],
+    [/\bbawaklah\b/g, "bawa"],
+    [/\bmn\b/g, "mana"],
+    [/\bmaner\b/g, "mana"],
+    [/\bape\b/g, "apa"],
+    [/\bap\b/g, "apa"],
+    [/\bcamne\b/g, "bagaimana"],
+    [/\bmcm\b/g, "macam"],
+    [/\bcm\b/g, "macam"],
+    [/\bni\b/g, "ini"],
+    [/\btu\b/g, "itu"],
+    [/\bx\b/g, "tidak"],
+    [/\btak\b/g, "tidak"],
+    [/\btk\b/g, "tidak"],
+    [/\bdh\b/g, "sudah"],
+    [/\bdah\b/g, "sudah"],
+    [/\bblm\b/g, "belum"],
+    [/\bje\b/g, "sahaja"],
+    [/\bjer\b/g, "sahaja"],
+    [/\bpon\b/g, "pun"],
+    [/\bke\b/g, "ke"],
+    [/\bplk\b/g, "pula"],
+    [/\bpulak\b/g, "pula"],
+    [/\bdo\b/g, "buat"],
+    [/\bpls\b/g, "please"],
+    [/\bplz\b/g, "please"],
+    [/\bthx\b/g, "thanks"],
+    [/\bty\b/g, "thank you"]
   ];
 
-  return exactYes.includes(t);
+  replacements.forEach(([pattern, replacement]) => {
+    t = t.replace(pattern, replacement);
+  });
+
+  return t.replace(/\s+/g, " ").trim();
+}
+
+// ======================================
+// DETECT CURRENT FLOOR FROM CHAT
+// ======================================
+
+function detectCurrentFloor(text) {
+  const t = expandMalayShortform(text);
+
+  const patterns = [
+    /\b(?:saya|aku|i am|im|currently|sekarang saya|sekarang aku)\s+(?:berada\s+)?(?:di|dekat|on|at|dalam)\s+(?:floor|tingkat|level)?\s*([123])\b/,
+    /\b(?:current floor|my floor|saya di tingkat|saya kat tingkat|saya dekat tingkat)\s*([123])\b/,
+    /\b(?:floor|tingkat|level)\s*([123])\b/
+  ];
+
+  for (const pattern of patterns) {
+    const match = t.match(pattern);
+
+    if (match) {
+      return Number(match[1]);
+    }
+  }
+
+  const wordFloors = {
+    "satu": 1,
+    "pertama": 1,
+    "one": 1,
+    "dua": 2,
+    "kedua": 2,
+    "two": 2,
+    "tiga": 3,
+    "ketiga": 3,
+    "three": 3
+  };
+
+  const floorWordPattern =
+    /\b(?:saya|aku|i am|im|sekarang saya|sekarang aku)\s+(?:berada\s+)?(?:di|kat|dekat|on|at)\s+(?:floor|tingkat|level)?\s*(satu|pertama|one|dua|kedua|two|tiga|ketiga|three)\b/;
+
+  const wordMatch = t.match(floorWordPattern);
+
+  if (wordMatch) {
+    return wordFloors[wordMatch[1]];
+  }
+
+  // Accept a short answer such as "2" after the AI asks
+  // for the guest's current floor.
+  if (waitingForCurrentFloor) {
+    const shortMatch = t.match(
+      /^(?:floor|tingkat|level)?\s*(1|2|3|satu|dua|tiga|one|two|three)$/
+    );
+
+    if (shortMatch) {
+      const value = shortMatch[1];
+
+      return {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "satu": 1,
+        "dua": 2,
+        "tiga": 3,
+        "one": 1,
+        "two": 2,
+        "three": 3
+      }[value];
+    }
+  }
+
+  return null;
+}
+
+// ======================================
+// DETECT FACILITY
+// ======================================
+
+function detectFacilityFloor(text) {
+  const t = expandMalayShortform(text);
+
+  const facilities = Object.keys(FACILITY_FLOORS)
+    .sort((a, b) => b.length - a.length);
+
+  for (const facility of facilities) {
+    if (t.includes(facility)) {
+      return {
+        name: facility,
+        floor: FACILITY_FLOORS[facility]
+      };
+    }
+  }
+
+  return null;
+}
+
+// ======================================
+// DETECT CONFIRMATION
+// ======================================
+
+function isConfirmation(text) {
+  const t = expandMalayShortform(text);
+
+  const yesWords = [
+    "yes", "yeah", "yep", "y",
+    "ya", "ye", "ok", "okay",
+    "betul", "benar", "setuju",
+    "saya setuju", "sahkan",
+    "confirm", "confirmed",
+    "i confirm", "i agree",
+    "boleh", "teruskan",
+    "hantar", "terus", "haah",
+    "haa", "aah", "baik",
+    "baiklah", "sure", "go ahead",
+    "do it", "jom", "nak"
+  ];
+
+  return yesWords.includes(t);
 }
 
 function isRejection(text) {
-  const t = normaliseText(text);
+  const t = expandMalayShortform(text);
 
-  const exactNo = [
-    "no","nope","n","cancel","cancel it",
-    "do not proceed","don't proceed",
-    "tak","tidak","batal","jangan",
-    "jangan hantar","tak setuju","tidak setuju"
+  const noWords = [
+    "no", "nope", "n",
+    "cancel", "cancel it",
+    "do not proceed",
+    "tidak", "batal",
+    "jangan", "jangan hantar",
+    "tak setuju", "tidak setuju",
+    "tak nak", "tidak mahu",
+    "xnak", "tak jadi",
+    "dont", "stop"
   ];
 
-  return exactNo.includes(t);
-}
-
-// ======================================
-// DIRECT LIFT COMMAND
-// ======================================
-
-function detectDirectLiftCommand(text) {
-  const t = String(text || "").toLowerCase();
-
-  const hasRequest =
-    /\b(send|call|request|bring|take me|i want to go|go to|please take)\b/.test(t) ||
-    /\b(panggil|hantar|nak pergi|bawa saya|saya nak pergi|saya mahu pergi)\b/.test(t);
-
-  if (!hasRequest) return null;
-
-  const match = t.match(
-    /\b(?:floor|level|tingkat)\s*(?:number\s*)?([123])\b/
-  );
-
-  return match ? Number(match[1]) : null;
+  return noWords.includes(t);
 }
 
 // ======================================
@@ -437,26 +471,28 @@ function detectDirectLiftCommand(text) {
 async function submitAILiftRequest(floor) {
   if (!currentFloor) {
     addMessage(
-      "Please select your current floor on the website first.",
+      "Awak berada di tingkat berapa sekarang? Contohnya, Tingkat 2.",
       "ai"
     );
+
+    waitingForCurrentFloor = true;
     return;
   }
 
   floor = Number(floor);
 
-  if (![1,2,3].includes(floor)) {
-    addMessage("Please select a valid floor.","ai");
+  if (![1, 2, 3].includes(floor)) {
+    addMessage("Please select a valid floor.", "ai");
     return;
   }
 
   if (floor === currentFloor) {
-    addMessage("You are already here!","ai");
+    addMessage("You are already here!", "ai");
     return;
   }
 
   try {
-    const queueId = await sendLiftRequest(currentFloor,floor);
+    const queueId = await sendLiftRequest(currentFloor, floor);
 
     addMessage(
       "Your elevator request has been submitted!\n\n" +
@@ -466,8 +502,9 @@ async function submitAILiftRequest(floor) {
       "ai"
     );
 
-  } catch(error) {
+  } catch (error) {
     console.error(error);
+
     addMessage(
       "I could not send the elevator request. Please try again.",
       "ai"
@@ -483,56 +520,180 @@ async function sendMessage() {
   if (isSendingMessage) return;
 
   const input = document.getElementById("chatInput");
-  const text = input.value.trim();
+  const originalText = input.value.trim();
 
-  if (!text) return;
+  if (!originalText) return;
 
   input.value = "";
-  addMessage(text,"user");
+  addMessage(originalText, "user");
 
-  // Handle lift confirmation.
+  const text = expandMalayShortform(originalText);
+
+  // --------------------------------------
+  // 1. Detect current floor from message
+  // --------------------------------------
+
+  const detectedFloor = detectCurrentFloor(originalText);
+
+  if (detectedFloor !== null) {
+    updateCurrentFloor(detectedFloor);
+    waitingForCurrentFloor = false;
+
+    if (pendingLiftRequest) {
+      addMessage(
+        "Okay, awak sekarang di tingkat " + currentFloor +
+        ". Destinasi masih tingkat " +
+        pendingLiftRequest.destinationFloor +
+        ". Nak saya hantar permintaan lif?",
+        "ai"
+      );
+
+      return;
+    }
+  }
+
+  // --------------------------------------
+  // 2. Handle confirmation
+  // --------------------------------------
+
   if (pendingLiftRequest && isConfirmation(text)) {
     const floor = pendingLiftRequest.destinationFloor;
+
+    if (!currentFloor) {
+      addMessage(
+        "Awak berada di tingkat berapa sekarang? Contohnya, Tingkat 2.",
+        "ai"
+      );
+
+      waitingForCurrentFloor = true;
+      return;
+    }
+
     pendingLiftRequest = null;
+    waitingForCurrentFloor = false;
 
     await submitAILiftRequest(floor);
     return;
   }
 
+  // --------------------------------------
+  // 3. Handle rejection
+  // --------------------------------------
+
   if (pendingLiftRequest && isRejection(text)) {
     pendingLiftRequest = null;
-    addMessage("Okay. The elevator request has been cancelled.","ai");
-    return;
-  }
-
-  // Direct command for a numbered floor.
-  const directFloor = detectDirectLiftCommand(text);
-
-  if (directFloor !== null) {
-    if (!currentFloor) {
-      addMessage(
-        "Please select your current floor on the website first.",
-        "ai"
-      );
-      return;
-    }
-
-    if (directFloor === currentFloor) {
-      addMessage("You are already here!","ai");
-      return;
-    }
-
-    pendingLiftRequest = {destinationFloor:directFloor};
 
     addMessage(
-      "You are currently on Floor " + currentFloor +
-      ". Do you want me to send the lift to Floor " + directFloor +
-      "?\n\nPlease reply YES to confirm or NO to cancel.",
+      "Okay, permintaan lif telah dibatalkan.",
       "ai"
     );
 
     return;
   }
+
+  // --------------------------------------
+  // 4. Detect facility
+  // --------------------------------------
+
+  const facility = detectFacilityFloor(originalText);
+
+  // --------------------------------------
+  // 5. Detect direct travel intention
+  // --------------------------------------
+
+  const directTravelPattern =
+    /\b(nak pergi|pergi ke|bawa saya|bawak saya|hantar saya|panggil lif|nak ke|saya nak|i want to go|take me|bring me|send me|go to|call the lift|call elevator)\b/i;
+
+  const hasDirectTravelIntent =
+    directTravelPattern.test(text);
+
+  // --------------------------------------
+  // 6. Facility travel request
+  // --------------------------------------
+
+  if (facility && hasDirectTravelIntent) {
+    if (!currentFloor) {
+      pendingLiftRequest = {
+        destinationFloor: facility.floor,
+        facility: facility.name
+      };
+
+      waitingForCurrentFloor = true;
+
+      addMessage(
+        "Boleh! " + facility.name +
+        " berada di tingkat " + facility.floor +
+        ". Awak berada di tingkat berapa sekarang?",
+        "ai"
+      );
+
+      return;
+    }
+
+    if (currentFloor === facility.floor) {
+      addMessage(
+        "You are already here! " +
+        facility.name + " is on your current floor.",
+        "ai"
+      );
+
+      return;
+    }
+
+    pendingLiftRequest = {
+      destinationFloor: facility.floor,
+      facility: facility.name
+    };
+
+    addMessage(
+      facility.name + " berada di tingkat " +
+      facility.floor + ".\n\n" +
+      "Awak sekarang di tingkat " + currentFloor +
+      ". Nak saya hantar permintaan lif ke sana?\n\n" +
+      "Reply YES untuk sahkan atau NO untuk batal.",
+      "ai"
+    );
+
+    return;
+  }
+
+  // --------------------------------------
+  // 7. Facility location question
+  // --------------------------------------
+
+  const locationQuestionPattern =
+    /\b(where|which floor|what floor|kat mana|dekat mana|di mana|tingkat berapa|floor berapa|mana satu|lokasi|location)\b/i;
+
+  if (facility && locationQuestionPattern.test(text)) {
+    let reply =
+      facility.name + " berada di tingkat " +
+      facility.floor + ".";
+
+    if (currentFloor && currentFloor !== facility.floor) {
+      reply +=
+        "\n\nAwak sekarang di tingkat " + currentFloor +
+        ". Nak saya bawa awak ke sana?";
+    } else if (!currentFloor) {
+      reply +=
+        "\n\nNak saya bawa awak ke sana?";
+    } else {
+      reply += "\n\nYou are already here!";
+    }
+
+    if (!currentFloor || currentFloor !== facility.floor) {
+      pendingLiftRequest = {
+        destinationFloor: facility.floor,
+        facility: facility.name
+      };
+    }
+
+    addMessage(reply, "ai");
+    return;
+  }
+
+  // --------------------------------------
+  // 8. Ask AI backend
+  // --------------------------------------
 
   const thinking = document.createElement("div");
   thinking.className = "message ai-message";
@@ -546,13 +707,15 @@ async function sendMessage() {
   document.getElementById("sendButton").disabled = true;
 
   try {
-    const response = await fetch(AI_API_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        message:text,
-        currentFloor:currentFloor,
-        history:chatHistory
+    const response = await fetch(AI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: originalText,
+        currentFloor: currentFloor,
+        history: chatHistory
       })
     });
 
@@ -565,7 +728,9 @@ async function sendMessage() {
     }
 
     if (!response.ok) {
-      throw new Error(data.error || "AI server error");
+      throw new Error(
+        data.details || data.error || "AI server error"
+      );
     }
 
     thinking.remove();
@@ -576,48 +741,74 @@ async function sendMessage() {
       throw new Error("Invalid AI response.");
     }
 
-    chatHistory.push({role:"user",content:text});
-    chatHistory.push({role:"assistant",content:reply});
+    chatHistory.push({
+      role: "user",
+      content: originalText
+    });
+
+    chatHistory.push({
+      role: "assistant",
+      content: reply
+    });
+
     chatHistory = chatHistory.slice(-10);
 
-    // AI asks for lift confirmation.
+    // --------------------------------------
+    // 9. AI asks for current floor
+    // --------------------------------------
+
+    if (
+      /current floor|select your current floor|tingkat berapa sekarang|berada di tingkat berapa/i.test(reply)
+    ) {
+      waitingForCurrentFloor = true;
+    }
+
+    // --------------------------------------
+    // 10. AI asks for confirmation
+    // --------------------------------------
+
     if (data.action === "confirm_lift") {
       const floor = Number(data.destinationFloor);
 
-      if (![1,2,3].includes(floor) || !currentFloor) {
+      if (![1, 2, 3].includes(floor)) {
+        addMessage(reply, "ai");
+        return;
+      }
+
+      if (!currentFloor) {
+        pendingLiftRequest = {
+          destinationFloor: floor
+        };
+
+        waitingForCurrentFloor = true;
+
         addMessage(
-          !currentFloor
-            ? "Please select your current floor on the website first."
-            : reply,
+          "Awak berada di tingkat berapa sekarang?",
           "ai"
         );
+
         return;
       }
 
       if (floor === currentFloor) {
-        addMessage("You are already here!","ai");
+        addMessage("You are already here!", "ai");
         return;
       }
 
-      pendingLiftRequest = {destinationFloor:floor};
-      addMessage(reply,"ai");
+      pendingLiftRequest = {
+        destinationFloor: floor
+      };
+
+      addMessage(reply, "ai");
       return;
     }
 
-    // AI is not allowed to bypass website confirmation.
-    if (data.action === "submit") {
-      addMessage(
-        "Please confirm the elevator destination first.",
-        "ai"
-      );
-      return;
-    }
+    addMessage(reply, "ai");
 
-    addMessage(reply,"ai");
-
-  } catch(error) {
+  } catch (error) {
     thinking.remove();
-    console.error("AI error:",error);
+
+    console.error("AI error:", error);
 
     addMessage(
       "Sorry, the AI Assistant is temporarily unavailable. Please try again.\n\n" +
@@ -637,16 +828,19 @@ async function sendMessage() {
 
 function startVoice() {
   const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
 
   const status = document.getElementById("voiceStatus");
   const voiceButton = document.getElementById("voiceButton");
+
   const selectedLanguage =
     document.getElementById("voiceLanguage").value;
 
   if (!SpeechRecognition) {
     status.textContent =
-      "Voice recognition is not supported in this browser. Please use a supported browser such as Chrome.";
+      "Voice recognition is not supported in this browser. Please use Chrome.";
+
     return;
   }
 
@@ -657,7 +851,12 @@ function startVoice() {
 
   if (recognition) {
     recognition.onend = null;
-    recognition.stop();
+
+    try {
+      recognition.stop();
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   recognition = new SpeechRecognition();
@@ -668,8 +867,10 @@ function startVoice() {
   recognition.maxAlternatives = 1;
 
   isListening = true;
+
   voiceButton.classList.add("recording");
   voiceButton.textContent = "🔴 LISTENING...";
+
   status.textContent =
     selectedLanguage === "ms-MY"
       ? "Mendengar... Sila bercakap sekarang."
@@ -679,8 +880,13 @@ function startVoice() {
     let finalTranscript = "";
     let interimTranscript = "";
 
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
+    for (
+      let i = event.resultIndex;
+      i < event.results.length;
+      i++
+    ) {
+      const transcript =
+        event.results[i][0].transcript;
 
       if (event.results[i].isFinal) {
         finalTranscript += transcript;
@@ -690,41 +896,57 @@ function startVoice() {
     }
 
     if (interimTranscript) {
-      status.textContent = "Recognising: " + interimTranscript;
+      status.textContent =
+        "Recognising: " + interimTranscript;
     }
 
     if (finalTranscript.trim()) {
       document.getElementById("chatInput").value =
         finalTranscript.trim();
 
-      status.textContent = "Voice captured. Sending to AI...";
+      status.textContent =
+        "Voice captured. Sending to AI...";
+
       sendMessage();
     }
   };
 
   recognition.onerror = function(event) {
-    status.textContent = "Voice error: " + event.error;
+    status.textContent =
+      "Voice error: " + event.error;
   };
 
   recognition.onend = function() {
     isListening = false;
+
     voiceButton.classList.remove("recording");
     voiceButton.textContent = "🎤 START VOICE";
 
-    if (status.textContent.includes("Listening")) {
+    if (
+      status.textContent.includes("Listening") ||
+      status.textContent.includes("Mendengar")
+    ) {
       status.textContent = "Voice recognition stopped.";
     }
   };
 
   try {
     recognition.start();
-  } catch(error) {
+
+  } catch (error) {
     isListening = false;
+
     voiceButton.classList.remove("recording");
     voiceButton.textContent = "🎤 START VOICE";
-    status.textContent = "Unable to start microphone. Please try again.";
+
+    status.textContent =
+      "Unable to start microphone. Please try again.";
   }
 }
+
+// ======================================
+// STOP VOICE
+// ======================================
 
 function stopVoice() {
   if (recognition && isListening) {
@@ -733,12 +955,13 @@ function stopVoice() {
 
   isListening = false;
 
-  document.getElementById("voiceButton").classList.remove("recording");
-  document.getElementById("voiceButton").textContent = "🎤 START VOICE";
+  document.getElementById("voiceButton")
+    .classList.remove("recording");
+
+  document.getElementById("voiceButton").textContent =
+    "🎤 START VOICE";
+
   document.getElementById("voiceStatus").textContent =
     "Voice recognition stopped.";
 }
 </script>
-
-</body>
-</html>
