@@ -169,10 +169,7 @@ function parseAIJson(content) {
   const lastBrace = cleaned.lastIndexOf("}");
 
   if (firstBrace === -1 || lastBrace === -1) {
-    const error = new Error(
-      "AI did not return a valid JSON object"
-    );
-
+    const error = new Error("AI did not return a valid JSON object");
     error.code = "invalid_json_response";
     throw error;
   }
@@ -197,9 +194,7 @@ function parseAIJson(content) {
 
 async function callGroq(messages, model) {
   if (!GROQ_API_KEY) {
-    throw new Error(
-      "GROQ_API_KEY is missing in Render Environment"
-    );
+    throw new Error("GROQ_API_KEY is missing in Render Environment");
   }
 
   async function sendRequest(useJsonMode) {
@@ -219,12 +214,10 @@ async function callGroq(messages, model) {
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
-
         headers: {
           "Authorization": `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json"
         },
-
         body: JSON.stringify(requestBody)
       }
     );
@@ -244,20 +237,14 @@ async function callGroq(messages, model) {
       throw error;
     }
 
-    const content =
-      result.choices?.[0]?.message?.content;
-
+    const content = result.choices?.[0]?.message?.content;
     return parseAIJson(content);
   }
 
   try {
     return await sendRequest(true);
-
   } catch (error) {
-    console.error(
-      "Groq first attempt failed:",
-      error.message
-    );
+    console.error("Groq first attempt failed:", error.message);
 
     if (
       error.code === "json_validate_failed" ||
@@ -279,7 +266,10 @@ const SYSTEM_PROMPT = `
 You are the Hotel AI Assistant for an Intelligent Elevator System.
 
 Communicate in the same language as the guest.
-Support English and Bahasa Melayu.
+
+Support:
+- English
+- Bahasa Melayu
 
 Always return one valid JSON object.
 Do not use Markdown.
@@ -323,21 +313,15 @@ ELEVATOR RULES
 9. The website sends actual requests to Firebase.
 10. Never submit an elevator request without confirmation.
 
-Use this format when waiting for confirmation:
+When waiting for confirmation, use:
 
 {
   "action": "confirm_lift",
-  "reply": "You are currently on Floor 2. Do you want to go to Floor 3? Please confirm.",
+  "reply": "You are currently on Floor 1. Your destination is Floor 3. Would you like me to send the lift? Please confirm.",
   "destinationFloor": 3
 }
 
-Use this format after explicit confirmation:
-
-{
-  "action": "submit",
-  "reply": "Your elevator request is confirmed.",
-  "destinationFloor": 3
-}
+Do not use action "submit" to bypass the website confirmation process.
 
 ======================================
 REPORT RULES
@@ -351,68 +335,77 @@ Supported report types:
 - General Complaint
 - Other
 
-1. Ask for report type, incident floor and incident location.
-2. Ask for a description if necessary.
-3. Do not ask for guest name, phone number, email or room number.
-4. Collect all required report details before confirmation.
-5. Show the collected report details to the guest.
-6. Do not submit before explicit confirmation.
-7. For suspicious persons, describe visible observations only.
-8. Never identify or accuse anyone based on appearance.
-9. If there is immediate danger, advise the guest to move to a safe location and contact hotel security.
+1. Help guests submit a report to the hotel.
+2. Ask for the report type.
+3. Ask for the incident floor.
+4. Ask for the incident location.
+5. Ask for a description if necessary.
+6. Do not ask for guest name, phone number, email or room number.
+7. Do not ask the guest to repeat information already provided.
+8. Remember report details from the conversation history.
+9. If an image is provided, use visible information only.
+10. Do not invent missing report information.
 
 ======================================
-REPORT CONFIRMATION RULES
+REPORT CONFIRMATION PROCESS
 ======================================
 
-1. Remember report information from the conversation history.
-2. When important report information is missing, ask for it.
-3. Do not ask the guest to repeat information already provided.
-4. When all required information is available, return action "confirm_report".
-5. Include the complete report object in the response.
-6. The website will save the report and wait for confirmation.
-7. Do not use action "report" to submit an email.
-8. Do not claim that the report has been emailed.
-9. If the guest has not confirmed, do not claim that the report was submitted.
+This is very important.
 
-Understand confirmation words such as:
+The AI must NOT send an email.
 
-English:
-- Yes
-- Yes, I confirm
-- I agree
-- Submit the report
-- Please send it
-- Go ahead
+The website will send the email only after the guest confirms the report.
 
-Bahasa Melayu:
-- Ya
-- Ye
-- Betul
-- Saya sahkan
-- Ya, saya nak laporkan
-- Hantar laporan
-- Saya setuju
-- Teruskan
-- Sila hantar
+Follow this process:
 
-IMPORTANT:
-The website handles report confirmation.
-When the guest confirms a report, the website will submit it directly.
-Do not ask for confirmation a second time.
+STEP 1:
+Collect the report type, incident floor, location and description.
 
-Use this format when report details are complete:
+STEP 2:
+If important information is missing, ask the guest for the missing information.
+
+STEP 3:
+When all required information is available, show a clear summary.
+
+STEP 4:
+Ask the guest to confirm the summary before submitting.
+
+STEP 5:
+Return action "confirm_report" with the complete report object.
+
+Example:
 
 {
   "action": "confirm_report",
-  "reply": "Here is your report summary. Please confirm if all details are correct.",
+  "reply": "Here is your report summary:\\nReport Type: Lost Item\\nFloor: 1\\nLocation: Main Entrance\\nDescription: A black wallet was lost.\\n\\nIs all the information correct? Please reply YES to submit or NO to cancel.",
   "report": {
-    "type": "Suspicious Person",
-    "incidentFloor": 2,
-    "location": "Outside Deluxe Room",
-    "description": "A person was repeatedly seen walking past the room."
+    "type": "Lost Item",
+    "incidentFloor": 1,
+    "location": "Main Entrance",
+    "description": "A black wallet was lost."
   }
 }
+
+IMPORTANT CONFIRMATION RULES:
+
+1. Do not return "confirm_report" until all required report details are available.
+2. Do not return action "report".
+3. Do not return action "submit" for reports.
+4. Do not claim that an email has been sent.
+5. The website handles the guest's YES or NO response.
+6. If the guest changes report information before confirmation, update the summary.
+7. If the guest says NO before confirmation, respond that the report can be changed or cancelled.
+8. Never ask for confirmation repeatedly after the website has already received it.
+
+======================================
+SUSPICIOUS PERSON AND SAFETY
+======================================
+
+1. Describe visible observations only.
+2. Never identify a person in an image.
+3. Never accuse anyone based on appearance.
+4. If there is immediate danger, advise the guest to move to a safe location and contact hotel security.
+5. Do not claim that hotel staff have investigated or resolved an incident.
 
 ======================================
 IMAGE RULES
@@ -423,8 +416,7 @@ IMAGE RULES
 3. Do not identify a person in the image.
 4. Do not accuse anyone based on appearance.
 5. If the image relates to a report, use visible details to help the guest describe the incident.
-6. The website is responsible for keeping the uploaded image until report submission.
-7. The backend will attach the image to the hotel email if the website supplies it.
+6. The website may attach the uploaded image to the final hotel report.
 
 ======================================
 RESPONSE FORMAT
@@ -445,19 +437,11 @@ ELEVATOR CONFIRMATION:
   "destinationFloor": 3
 }
 
-ELEVATOR SUBMISSION:
-
-{
-  "action": "submit",
-  "reply": "Your elevator request is confirmed.",
-  "destinationFloor": 3
-}
-
-REPORT CONFIRMATION:
+REPORT SUMMARY AND CONFIRMATION:
 
 {
   "action": "confirm_report",
-  "reply": "Here is your report summary. Please confirm if all details are correct.",
+  "reply": "Here is your report summary. Please confirm before submission.",
   "report": {
     "type": "Lost Item",
     "incidentFloor": 1,
@@ -473,8 +457,7 @@ IMPORTANT:
 - Never invent missing report information.
 - Never claim an email has been sent.
 - Never claim a lift has physically moved.
-- Only use action "confirm_report" when all report details are available.
-- Never use action "report" for email submission.
+- The website handles final report submission after confirmation.
 `;
 
 // ======================================
@@ -536,7 +519,6 @@ app.post("/api/assistant", async (req, res) => {
     }
 
     // Keep only valid text conversation history.
-
     const safeHistory = history
       .filter(item =>
         item &&
@@ -556,7 +538,9 @@ app.post("/api/assistant", async (req, res) => {
       ...safeHistory
     ];
 
+    // ======================================
     // IMAGE INPUT
+    // ======================================
 
     if (image) {
       if (!validImage(image)) {
@@ -580,7 +564,6 @@ app.post("/api/assistant", async (req, res) => {
           }
         ]
       });
-
     } else {
       messages.push({
         role: "user",
@@ -588,11 +571,11 @@ app.post("/api/assistant", async (req, res) => {
       });
     }
 
+    // ======================================
     // SELECT AI MODEL
+    // ======================================
 
-    const model = image
-      ? GROQ_VISION_MODEL
-      : GROQ_MODEL;
+    const model = image ? GROQ_VISION_MODEL : GROQ_MODEL;
 
     console.log("Using AI model:", model);
 
@@ -619,9 +602,7 @@ app.post("/api/assistant", async (req, res) => {
         });
       }
 
-      if (
-        Number(currentFloor) === Number(data.destinationFloor)
-      ) {
+      if (Number(currentFloor) === Number(data.destinationFloor)) {
         return res.json({
           action: "chat",
           reply: "You are already here!"
@@ -633,7 +614,7 @@ app.post("/api/assistant", async (req, res) => {
     }
 
     // ======================================
-    // VALIDATE REPORT INFORMATION
+    // VALIDATE REPORT CONFIRMATION
     // ======================================
 
     if (data.action === "confirm_report") {
@@ -651,18 +632,28 @@ app.post("/api/assistant", async (req, res) => {
         });
       }
 
+      if (
+        typeof report.description !== "string" &&
+        report.description !== undefined
+      ) {
+        return res.status(400).json({
+          error: "Invalid report description"
+        });
+      }
+
       data.report = {
         type: report.type,
         incidentFloor: Number(report.incidentFloor),
-        location: report.location.trim(),
-        description: String(report.description || "")
+        location: report.location.trim().slice(0, 300),
+        description: String(report.description || "").trim().slice(0, 2000)
       };
     }
 
-    // Do not allow the AI to directly trigger email submission.
+    // Do not allow the AI to trigger email submission directly.
     if (data.action === "report") {
-      return res.status(400).json({
-        error: "Report submission must be handled by the website confirmation process"
+      return res.json({
+        action: "chat",
+        reply: "I have prepared the report details. Please confirm the report summary before it is submitted."
       });
     }
 
@@ -698,24 +689,21 @@ app.post("/api/report", async (req, res) => {
       image
     } = req.body;
 
-    // VALIDATE REPORT TYPE
-
+    // Validate report type.
     if (!REPORT_TYPES.includes(type)) {
       return res.status(400).json({
         error: "Invalid report type"
       });
     }
 
-    // VALIDATE FLOOR
-
+    // Validate floor.
     if (!validFloor(incidentFloor)) {
       return res.status(400).json({
         error: "Invalid incident floor"
       });
     }
 
-    // VALIDATE LOCATION
-
+    // Validate location.
     if (
       typeof location !== "string" ||
       !location.trim()
@@ -725,8 +713,17 @@ app.post("/api/report", async (req, res) => {
       });
     }
 
-    // VALIDATE IMAGE
+    // Validate description.
+    if (
+      description !== undefined &&
+      typeof description !== "string"
+    ) {
+      return res.status(400).json({
+        error: "Invalid report description"
+      });
+    }
 
+    // Validate image.
     if (image && !validImage(image)) {
       return res.status(400).json({
         error: "Invalid image format"
@@ -754,20 +751,12 @@ app.post("/api/report", async (req, res) => {
         <h2>Hotel Incident Report</h2>
 
         <p><b>Report ID:</b> ${escapeHTML(reportId)}</p>
-
         <p><b>Date:</b> ${escapeHTML(dateTime)}</p>
-
         <p><b>Type:</b> ${escapeHTML(type)}</p>
-
         <p><b>Floor:</b> ${Number(incidentFloor)}</p>
-
         <p><b>Location:</b> ${escapeHTML(location)}</p>
-
         <p><b>Description:</b> ${escapeHTML(description || "Not provided")}</p>
-
         <p><b>Reporter:</b> Anonymous</p>
-
-        <p><b>Image:</b> ${image ? "See attached image." : "No image attached."}</p>
       `
     };
 
@@ -780,44 +769,34 @@ app.post("/api/report", async (req, res) => {
         /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i
       );
 
-      if (!matches) {
-        return res.status(400).json({
-          error: "Unable to process image attachment"
-        });
+      if (matches) {
+        const extension =
+          matches[1].toLowerCase() === "jpeg"
+            ? "jpg"
+            : matches[1].toLowerCase();
+
+        mailOptions.attachments = [
+          {
+            filename: `report-${reportId}.${extension}`,
+            content: Buffer.from(matches[2], "base64"),
+            contentType: `image/${matches[1].toLowerCase()}`
+          }
+        ];
       }
-
-      const imageType = matches[1].toLowerCase();
-
-      const extension =
-        imageType === "jpeg" ? "jpg" : imageType;
-
-      mailOptions.attachments = [
-        {
-          filename: `report-${reportId}.${extension}`,
-          content: Buffer.from(matches[2], "base64"),
-          contentType:
-            imageType === "jpg"
-              ? "image/jpeg"
-              : `image/${imageType}`
-        }
-      ];
     }
 
     // ======================================
     // SEND EMAIL
     // ======================================
 
-    const emailResult = await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
 
     console.log("Report email sent successfully:", reportId);
-    console.log("Email message ID:", emailResult.messageId);
-    console.log("Image attached:", Boolean(image));
 
     return res.json({
       success: true,
       reportId,
       dateTime,
-      imageAttached: Boolean(image),
       message: "Report submitted successfully"
     });
 
@@ -849,10 +828,7 @@ app.use((error, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
   console.log(`Vision model: ${GROQ_VISION_MODEL}`);
   console.log(`Chat model: ${GROQ_MODEL}`);
-
   console.log(`Email configured: ${Boolean(transporter)}`);
-  console.log(`Hotel email: ${HOTEL_EMAIL}`);
 });
