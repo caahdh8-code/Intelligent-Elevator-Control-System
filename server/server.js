@@ -13,9 +13,14 @@ const GROQ_MODEL =
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || origin === WEBSITE_URL) {
+    if (
+      !origin ||
+      origin === WEBSITE_URL ||
+      origin === "https://caahdh8-code.github.io"
+    ) {
       return callback(null, true);
     }
+
     return callback(new Error("Origin not allowed by CORS"));
   }
 }));
@@ -23,34 +28,125 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }));
 
 // ======================================
-// HOTEL DIRECTORY
+// HOTEL FACILITY DIRECTORY
 // ======================================
 
 const FACILITIES = [
-  { floor: 1, name: "Main Entrance", aliases: ["main entrance", "entrance", "pintu masuk"] },
-  { floor: 1, name: "Reception", aliases: ["reception", "front desk", "kaunter", "kaunter reception"] },
-  { floor: 1, name: "Waiting Lounge", aliases: ["waiting lounge", "ruang menunggu"] },
-  { floor: 1, name: "Restaurant", aliases: ["restaurant", "restoran", "tempat makan"] },
-  { floor: 1, name: "Cafe", aliases: ["cafe", "café", "kafe", "coffee shop", "kedai kopi"] },
-  { floor: 1, name: "Meeting Room", aliases: ["meeting room", "bilik meeting", "bilik mesyuarat"] },
-  { floor: 1, name: "Hotel Office", aliases: ["hotel office", "office", "pejabat"] },
-  { floor: 1, name: "Public Toilet", aliases: ["public toilet", "toilet", "tandas", "bilik air"] },
-
-  { floor: 2, name: "Standard Room", aliases: ["standard room", "standard", "bilik standard"] },
-  { floor: 2, name: "Deluxe Room", aliases: ["deluxe room", "deluxe", "bilik deluxe"] },
-  { floor: 2, name: "Twin Room", aliases: ["twin room", "twin", "bilik twin"] },
-  { floor: 2, name: "Family Room", aliases: ["family room", "family", "bilik family", "bilik keluarga"] },
-  { floor: 2, name: "Housekeeping Room", aliases: ["housekeeping room", "housekeeping"] },
-  { floor: 2, name: "Laundry Room", aliases: ["laundry room", "laundry", "dobi"] },
-  { floor: 2, name: "Guest Lounge", aliases: ["guest lounge", "ruang tetamu"] },
-
-  { floor: 3, name: "Swimming Pool", aliases: ["swimming pool", "pool", "swimming", "kolam renang", "kolam"] },
-  { floor: 3, name: "Gymnasium", aliases: ["gymnasium", "gym", "gim", "fitness", "fitness room"] },
-  { floor: 3, name: "Spa and Massage", aliases: ["spa and massage", "spa", "massage", "urut"] },
-  { floor: 3, name: "Sauna", aliases: ["sauna"] },
-  { floor: 3, name: "Rooftop Restaurant", aliases: ["rooftop restaurant", "rooftop", "restoran rooftop"] },
-  { floor: 3, name: "Sky Lounge", aliases: ["sky lounge"] },
-  { floor: 3, name: "Kids Playroom", aliases: ["kids playroom", "playroom", "kids room", "bilik permainan kanak kanak"] }
+  {
+    floor: 1,
+    name: "Main Entrance",
+    aliases: ["main entrance", "entrance", "pintu masuk"]
+  },
+  {
+    floor: 1,
+    name: "Reception",
+    aliases: ["reception", "front desk", "kaunter", "kaunter reception"]
+  },
+  {
+    floor: 1,
+    name: "Waiting Lounge",
+    aliases: ["waiting lounge", "ruang menunggu"]
+  },
+  {
+    floor: 1,
+    name: "Restaurant",
+    aliases: ["restaurant", "restoran", "tempat makan"]
+  },
+  {
+    floor: 1,
+    name: "Cafe",
+    aliases: ["cafe", "café", "kafe", "coffee shop", "kedai kopi"]
+  },
+  {
+    floor: 1,
+    name: "Meeting Room",
+    aliases: ["meeting room", "bilik meeting", "bilik mesyuarat"]
+  },
+  {
+    floor: 1,
+    name: "Hotel Office",
+    aliases: ["hotel office", "office", "pejabat"]
+  },
+  {
+    floor: 1,
+    name: "Public Toilet",
+    aliases: ["public toilet", "toilet", "tandas", "bilik air"]
+  },
+  {
+    floor: 2,
+    name: "Standard Room",
+    aliases: ["standard room", "standard", "bilik standard"]
+  },
+  {
+    floor: 2,
+    name: "Deluxe Room",
+    aliases: ["deluxe room", "deluxe", "bilik deluxe"]
+  },
+  {
+    floor: 2,
+    name: "Twin Room",
+    aliases: ["twin room", "twin", "bilik twin"]
+  },
+  {
+    floor: 2,
+    name: "Family Room",
+    aliases: ["family room", "family", "bilik family", "bilik keluarga"]
+  },
+  {
+    floor: 2,
+    name: "Housekeeping Room",
+    aliases: ["housekeeping room", "housekeeping"]
+  },
+  {
+    floor: 2,
+    name: "Laundry Room",
+    aliases: ["laundry room", "laundry", "dobi"]
+  },
+  {
+    floor: 2,
+    name: "Guest Lounge",
+    aliases: ["guest lounge", "ruang tetamu"]
+  },
+  {
+    floor: 3,
+    name: "Swimming Pool",
+    aliases: ["swimming pool", "pool", "swimming", "kolam", "kolam renang"]
+  },
+  {
+    floor: 3,
+    name: "Gymnasium",
+    aliases: ["gymnasium", "gym", "gim", "fitness", "fitness room"]
+  },
+  {
+    floor: 3,
+    name: "Spa and Massage",
+    aliases: ["spa and massage", "spa", "massage", "urut"]
+  },
+  {
+    floor: 3,
+    name: "Sauna",
+    aliases: ["sauna"]
+  },
+  {
+    floor: 3,
+    name: "Rooftop Restaurant",
+    aliases: ["rooftop restaurant", "rooftop", "restoran rooftop"]
+  },
+  {
+    floor: 3,
+    name: "Sky Lounge",
+    aliases: ["sky lounge"]
+  },
+  {
+    floor: 3,
+    name: "Kids Playroom",
+    aliases: [
+      "kids playroom",
+      "playroom",
+      "kids room",
+      "bilik permainan kanak kanak"
+    ]
+  }
 ];
 
 // ======================================
@@ -77,11 +173,13 @@ function expandShortforms(value) {
     [/\baku\b/g, " saya "],
     [/\bkau\b/g, " awak "],
     [/\bko\b/g, " awak "],
+    [/\bdye\b/g, " dia "],
+    [/\bdorg\b/g, " mereka "],
     [/\bdri\b/g, " dari "],
     [/\bdr\b/g, " dari "],
-    [/\bkt\b/g, " dekat "],
-    [/\bdkt\b/g, " dekat "],
-    [/\bkat\b/g, " dekat "],
+    [/\bkt\b/g, " di "],
+    [/\bdkt\b/g, " di "],
+    [/\bkat\b/g, " di "],
     [/\bnk\b/g, " nak "],
     [/\bngk\b/g, " nak "],
     [/\bnek\b/g, " nak "],
@@ -89,23 +187,24 @@ function expandShortforms(value) {
     [/\bg\b/g, " pergi "],
     [/\bpegi\b/g, " pergi "],
     [/\bpi\b/g, " pergi "],
-    [/\bbrp\b/g, " berapa "],
+    [/\bbawak\b/g, " bawa "],
+    [/\bbwok\b/g, " bawa "],
     [/\bmn\b/g, " mana "],
+    [/\bmaner\b/g, " mana "],
     [/\btkt\b/g, " tingkat "],
+    [/\bbrp\b/g, " berapa "],
+    [/\bape\b/g, " apa "],
     [/\bskrg\b/g, " sekarang "],
     [/\bskang\b/g, " sekarang "],
-    [/\bdh\b/g, " sudah "],
-    [/\bdah\b/g, " sudah "],
     [/\bx\b/g, " tidak "],
     [/\btak\b/g, " tidak "],
     [/\btk\b/g, " tidak "],
+    [/\bdh\b/g, " sudah "],
+    [/\bdah\b/g, " sudah "],
     [/\bblm\b/g, " belum "],
-    [/\bape\b/g, " apa "],
-    [/\bcmne\b/g, " bagaimana "],
-    [/\bcamne\b/g, " bagaimana "],
-    [/\bmcm\b/g, " macam "],
-    [/\bpls\b/g, " please "],
-    [/\bplz\b/g, " please "]
+    [/\bje\b/g, " sahaja "],
+    [/\bjer\b/g, " sahaja "],
+    [/\bpon\b/g, " pun "]
   ];
 
   for (const [pattern, replacement] of replacements) {
@@ -116,45 +215,74 @@ function expandShortforms(value) {
 }
 
 // ======================================
-// FLOOR DETECTION
-// Only detect the guest's CURRENT floor.
-// Never use a destination floor as current floor.
+// FLOOR VALIDATION
+// ======================================
+
+function validFloor(value) {
+  const floor = Number(value);
+
+  return Number.isInteger(floor) &&
+    floor >= 1 &&
+    floor <= 3;
+}
+
+// ======================================
+// DETECT CURRENT FLOOR
 // ======================================
 
 function detectCurrentFloor(message) {
   const text = expandShortforms(message);
 
-  const number = "(1|2|3)";
-  const word = "(satu|pertama|one|dua|kedua|two|tiga|ketiga|three)";
-
   const patterns = [
-    new RegExp("\\b(?:saya|awak|i am|im|i)\\s+(?:sekarang\\s+)?(?:berada\\s+)?(?:di|dekat|dari|on|at)\\s+(?:floor|tingkat|level)?\\s*" + number + "\\b"),
-    new RegExp("\\b(?:saya|awak)\\s+(?:sekarang\\s+)?(?:berada\\s+)?(?:di|dekat|dari)\\s+(?:floor|tingkat|level)?\\s*" + word + "\\b"),
-    new RegExp("\\b(?:i am|im|currently)\\s+(?:on|at|in)\\s+(?:floor|level)?\\s*" + number + "\\b"),
-    new RegExp("\\b(?:from|dari)\\s+(?:floor|tingkat|level)\\s*" + number + "\\b"),
-    new RegExp("\\b(?:current floor|my floor|tingkat saya|floor saya)\\s*(?:is|ialah|adalah)?\\s*" + number + "\\b")
+    /\b(?:saya|aku|awak|i am|im)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari|from|on|at)\s+(?:floor|level|tingkat)?\s*([1-3])\b/,
+    /\b(?:dari|from)\s+(?:floor|level|tingkat)\s*([1-3])\b/,
+    /\b(?:current floor|my floor|floor saya|tingkat saya)\s*(?:is|ialah|adalah)?\s*([1-3])\b/
   ];
-
-  const words = {
-    satu: 1, pertama: 1, one: 1,
-    dua: 2, kedua: 2, two: 2,
-    tiga: 3, ketiga: 3, three: 3
-  };
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
-    if (match) {
-      const value = match[1];
-      return words[value] || Number(value);
-    }
+    if (match) return Number(match[1]);
   }
+
+  const words = {
+    satu: 1,
+    pertama: 1,
+    one: 1,
+    dua: 2,
+    kedua: 2,
+    two: 2,
+    tiga: 3,
+    ketiga: 3,
+    three: 3
+  };
+
+  const wordMatch = text.match(
+    /\b(?:saya|aku|i am|im)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari|from|on|at)\s+(?:floor|level|tingkat)?\s*(satu|pertama|one|dua|kedua|two|tiga|ketiga|three)\b/
+  );
+
+  if (wordMatch) return words[wordMatch[1]];
 
   return null;
 }
 
-function validFloor(value) {
-  const floor = Number(value);
-  return Number.isInteger(floor) && floor >= 1 && floor <= 3;
+// ======================================
+// DETECT DESTINATION FLOOR
+// ======================================
+
+function detectDestinationFloor(message) {
+  const text = expandShortforms(message);
+
+  const patterns = [
+    /\b(?:nak|mahu|ingin|pergi|go|travel|head)\s+(?:pergi\s+)?(?:ke|to)?\s*(?:floor|level|tingkat)\s*([1-3])\b/,
+    /\b(?:bawa|hantar|take|send)\s+(?:saya|aku|me)?\s*(?:ke|to)\s*(?:floor|level|tingkat)\s*([1-3])\b/
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return Number(match[1]);
+  }
+
+  return null;
 }
 
 // ======================================
@@ -180,35 +308,8 @@ function findFacility(message) {
   }
 
   matches.sort((a, b) => b.length - a.length);
+
   return matches[0] || null;
-}
-
-// ======================================
-// DESTINATION FLOOR DETECTION
-// ======================================
-
-function detectDestinationFloor(message) {
-  const text = expandShortforms(message);
-
-  const match = text.match(
-    /\b(?:nak ke|pergi ke|bawa saya ke|hantar saya ke|go to|take me to|bring me to|destination|destinasi)\s+(?:floor|tingkat|level)?\s*(1|2|3)\b/
-  );
-
-  if (match) return Number(match[1]);
-
-  const words = {
-    satu: 1, pertama: 1, one: 1,
-    dua: 2, kedua: 2, two: 2,
-    tiga: 3, ketiga: 3, three: 3
-  };
-
-  const wordMatch = text.match(
-    /\b(?:nak ke|pergi ke|go to|take me to|destination|destinasi)\s+(?:floor|tingkat|level)\s+(satu|pertama|one|dua|kedua|two|tiga|ketiga|three)\b/
-  );
-
-  if (wordMatch) return words[wordMatch[1]];
-
-  return null;
 }
 
 // ======================================
@@ -219,8 +320,8 @@ function isLocationQuestion(message) {
   const text = expandShortforms(message);
 
   return (
-    /\b(where|where is|where are|which floor|what floor|located|location)\b/.test(text) ||
-    /\b(mana|di mana|dekat mana|tingkat berapa|floor berapa|berapa tingkat|kat mana)\b/.test(text)
+    /\b(where|which floor|what floor|located|location)\b/.test(text) ||
+    /\b(mana|di mana|dekat mana|tingkat berapa|floor berapa|berapa tingkat)\b/.test(text)
   );
 }
 
@@ -228,16 +329,19 @@ function isTravelCommand(message) {
   const text = expandShortforms(message);
 
   return (
-    /\b(take me|bring me|send me|i want to go|i wanna go|i need to go|go to|head to|call the lift|call elevator)\b/.test(text) ||
-    /\b(nak pergi|mahu pergi|ingin pergi|bawa saya|bawak saya|hantar saya|saya nak ke|saya mahu ke|pergi ke|nak ke|panggil lif|hantar lif)\b/.test(text) ||
-    /\b(saya nak|nak|mahu|ingin)\s+(?:ke|pergi)\b/.test(text)
+    /\b(take me|bring me|send me|i want to go|i wanna go|i need to go|go to|head to|call the lift|call elevator|take us|bring us)\b/.test(text) ||
+    /\b(nak pergi|mahu pergi|ingin pergi|bawa saya|bawa awak|hantar saya|saya nak|saya mahu|pergi ke|nak ke|panggil lif|hantar lif|tolong bawa|tolong hantar)\b/.test(text)
   );
 }
+
+// ======================================
+// LANGUAGE DETECTION
+// ======================================
 
 function detectLanguage(message) {
   const text = expandShortforms(message);
 
-  if (/\b(saya|awak|nak|pergi|tingkat|dengan|mana|berapa|dekat|bawa|hantar|sekarang)\b/.test(text)) {
+  if (/\b(saya|awak|nak|pergi|tingkat|dengan|mana|berapa|bawa|hantar|tolong|tidak)\b/.test(text)) {
     return "ms";
   }
 
@@ -245,25 +349,21 @@ function detectLanguage(message) {
 }
 
 // ======================================
-// RESPONSE HELPERS
+// REPLY HELPERS
 // ======================================
 
 function askFloorReply(language) {
   return language === "ms"
-    ? "Boleh beritahu saya awak berada di tingkat berapa sekarang? Contohnya, Tingkat 2."
-    : "Which floor are you currently on? For example, Floor 2.";
+    ? "Boleh beritahu saya awak berada di tingkat berapa sekarang?"
+    : "May I know which floor you are currently on?";
 }
 
 function locationReply(facility, language) {
   return language === "ms"
-    ? facility.name + " berada di Tingkat " + facility.floor + ". Nak saya bawa awak ke sana?"
-    : facility.name + " is on Floor " + facility.floor + ". Would you like me to take you there?";
-}
-
-function sameFloorReply(facility, language) {
-  return language === "ms"
-    ? "Awak sudah berada di tingkat yang sama! " + facility.name + " berada di Tingkat " + facility.floor + "."
-    : "You are already on the same floor! " + facility.name + " is on Floor " + facility.floor + ".";
+    ? facility.name + " berada di Tingkat " +
+      facility.floor + ". Nak saya bawa awak ke sana?"
+    : facility.name + " is on Floor " +
+      facility.floor + ". Would you like me to take you there?";
 }
 
 // ======================================
@@ -273,21 +373,31 @@ function sameFloorReply(facility, language) {
 const SYSTEM_PROMPT = `
 You are the Hotel AI Assistant for a three-floor hotel elevator.
 
-Understand natural Bahasa Melayu, English, Malay slang, shortforms,
-informal spelling, typos and voice transcription.
+Your job is to help hotel guests naturally.
 
-Examples:
-"sy nk g gym" means "Saya nak pergi ke gym".
-"cafe kt mn?" means "Cafe dekat mana?"
-"sy dri floor 2 nk ke cafe" means the guest is on Floor 2 and wants Cafe.
-"aku kt tingkat 1" means the guest is on Floor 1.
-"brp tingkat pool?" asks which floor has the swimming pool.
+LANGUAGES:
+- Understand Bahasa Melayu and English.
+- Understand informal Malay, slang, abbreviations and spelling mistakes.
+- Understand short messages and speech-to-text sentences.
+- Reply in the same language used by the guest.
+- Be friendly, natural and concise.
+
+MALAY SHORTFORM EXAMPLES:
+- sy / sye = saya
+- kt / kat / dkt = di / dekat
+- dri / dr = dari
+- nk / ngk = nak
+- gi / g / pegi = pergi
+- mn = mana
+- brp = berapa
+- tkt = tingkat
+- x / tak = tidak
 
 HOTEL DIRECTORY:
 
 FLOOR 1:
-Main Entrance, Reception, Front Desk, Waiting Lounge,
-Restaurant, Cafe, Meeting Room, Hotel Office, Public Toilet.
+Main Entrance, Reception, Waiting Lounge, Restaurant,
+Cafe, Meeting Room, Hotel Office, Public Toilet.
 
 FLOOR 2:
 Standard Room, Deluxe Room, Twin Room, Family Room,
@@ -297,17 +407,24 @@ FLOOR 3:
 Swimming Pool, Gymnasium, Spa and Massage, Sauna,
 Rooftop Restaurant, Sky Lounge, Kids Playroom.
 
-Rules:
-- Reply naturally and briefly.
-- Use the same language as the guest.
-- Do not invent hotel facilities or information.
-- Do not claim the elevator has moved or arrived.
-- Do not say a lift request was sent unless the system confirms it.
-- For unclear requests, ask one simple question.
+EXAMPLES:
+"cafe kt mn?" means the guest asks where the cafe is.
+"sy nk g gym" means the guest wants to go to the gym.
+"kolam renang tingkat berapa?" means the guest asks where the swimming pool is.
+"brp tingkat bilik deluxe?" means the guest asks which floor has the deluxe room.
+
+RULES:
+- Answer questions about hotel facilities using the directory.
+- Do not invent facilities or hotel information.
+- Do not claim that the elevator has moved or arrived.
+- Do not say a request was sent to Firebase unless the system confirms it.
+- Do not ask for confirmation repeatedly.
+- Never guess the guest's current floor.
+- If the guest asks a general question, answer naturally.
 `;
 
 // ======================================
-// GROQ REQUEST
+// GROQ API REQUEST
 // ======================================
 
 async function callGroq(messages) {
@@ -335,14 +452,16 @@ async function callGroq(messages) {
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.error?.message || "Groq API request failed");
+    throw new Error(
+      result.error?.message || "Groq API request failed"
+    );
   }
 
   return result.choices?.[0]?.message?.content || "";
 }
 
 // ======================================
-// ROUTES
+// BASIC ROUTES
 // ======================================
 
 app.get("/", (req, res) => {
@@ -355,12 +474,13 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     status: "healthy",
-    aiConfigured: Boolean(GROQ_API_KEY)
+    aiConfigured: Boolean(GROQ_API_KEY),
+    model: GROQ_MODEL
   });
 });
 
 // ======================================
-// AI ASSISTANT
+// AI ASSISTANT ROUTE
 // ======================================
 
 app.post("/api/assistant", async (req, res) => {
@@ -368,7 +488,9 @@ app.post("/api/assistant", async (req, res) => {
     const message = String(req.body.message || "").trim();
 
     if (!message) {
-      return res.status(400).json({ error: "Message is required" });
+      return res.status(400).json({
+        error: "Message is required"
+      });
     }
 
     const history = Array.isArray(req.body.history)
@@ -383,7 +505,7 @@ app.post("/api/assistant", async (req, res) => {
         ["user", "assistant"].includes(item.role) &&
         typeof item.content === "string"
       )
-      .slice(-10);
+      .slice(-12);
 
     const language = detectLanguage(message);
 
@@ -391,14 +513,23 @@ app.post("/api/assistant", async (req, res) => {
       ? Number(req.body.currentFloor)
       : null;
 
+    // An explicitly stated current floor in the message
+    // takes priority over the website's selected value.
     const detectedCurrent = detectCurrentFloor(message);
-    if (detectedCurrent !== null) currentFloor = detectedCurrent;
+
+    if (detectedCurrent !== null) {
+      currentFloor = detectedCurrent;
+    }
 
     const facility = findFacility(message);
     const locationQuestion = isLocationQuestion(message);
     const travelCommand = isTravelCommand(message);
 
-    // 1. Location question: offer only, do not send request.
+    // --------------------------------------
+    // LOCATION QUESTION
+    // Example: "cafe kt mn?"
+    // --------------------------------------
+
     if (facility && locationQuestion && !travelCommand) {
       return res.json({
         action: "offer_lift",
@@ -409,7 +540,11 @@ app.post("/api/assistant", async (req, res) => {
       });
     }
 
-    // 2. Direct request to a named hotel facility.
+    // --------------------------------------
+    // DIRECT FACILITY TRAVEL
+    // Example: "sy dri floor 2 nk ke cafe"
+    // --------------------------------------
+
     if (facility && travelCommand) {
       if (!currentFloor) {
         return res.json({
@@ -423,7 +558,12 @@ app.post("/api/assistant", async (req, res) => {
       if (currentFloor === facility.floor) {
         return res.json({
           action: "chat",
-          reply: sameFloorReply(facility, language)
+          reply: language === "ms"
+            ? "Awak sudah berada di tingkat yang sama! " +
+              facility.name + " berada di Tingkat " + facility.floor + "."
+            : "You are already on the same floor! " +
+              facility.name + " is on Floor " + facility.floor + ".",
+          currentFloor
         });
       }
 
@@ -433,7 +573,7 @@ app.post("/api/assistant", async (req, res) => {
           ? "Baik! Saya sedang menghantar permintaan lif dari Tingkat " +
             currentFloor + " ke " + facility.name +
             " di Tingkat " + facility.floor + "."
-          : "Okay! I am submitting your lift request from Floor " +
+          : "Okay! I am submitting your elevator request from Floor " +
             currentFloor + " to " + facility.name +
             " on Floor " + facility.floor + ".",
         currentFloor,
@@ -442,7 +582,11 @@ app.post("/api/assistant", async (req, res) => {
       });
     }
 
-    // 3. Direct request to a numbered floor.
+    // --------------------------------------
+    // DIRECT FLOOR NUMBER TRAVEL
+    // Example: "take me to floor 3"
+    // --------------------------------------
+
     const destinationFloor = detectDestinationFloor(message);
 
     if (destinationFloor && travelCommand) {
@@ -459,32 +603,47 @@ app.post("/api/assistant", async (req, res) => {
           action: "chat",
           reply: language === "ms"
             ? "Awak sudah berada di Tingkat " + destinationFloor + "!"
-            : "You are already on Floor " + destinationFloor + "!"
+            : "You are already on Floor " + destinationFloor + "!",
+          currentFloor
         });
       }
 
       return res.json({
         action: "send_lift",
         reply: language === "ms"
-          ? "Baik! Saya sedang menghantar permintaan lif ke Tingkat " + destinationFloor + "."
-          : "Okay! I am submitting your lift request to Floor " + destinationFloor + ".",
+          ? "Baik! Permintaan lif dari Tingkat " +
+            currentFloor + " ke Tingkat " +
+            destinationFloor + " sedang dihantar."
+          : "Okay! Your elevator request from Floor " +
+            currentFloor + " to Floor " +
+            destinationFloor + " is being submitted.",
         currentFloor,
         destinationFloor
       });
     }
 
-    // 4. General conversation through Groq.
+    // --------------------------------------
+    // NORMAL CONVERSATION WITH GROQ
+    // --------------------------------------
+
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "system",
+        content: SYSTEM_PROMPT
+      },
       ...safeHistory,
-      { role: "user", content: message }
+      {
+        role: "user",
+        content: message
+      }
     ];
 
     const aiReply = await callGroq(aiMessages);
 
     return res.json({
       action: "chat",
-      reply: aiReply
+      reply: aiReply,
+      currentFloor
     });
 
   } catch (error) {
