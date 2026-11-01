@@ -551,15 +551,38 @@ function addMessage(message,sender) {
 // ======================================
 
 function isConfirmation(text) {
-  const t = text.trim().toLowerCase();
+  const t = text
+    .toLowerCase()
+    .trim()
+    .replace(/[.,!?;:]+/g, " ")
+    .replace(/\s+/g, " ");
 
-  return /^(yes|yeah|yep|correct|confirm|confirmed|okay|ok|sure|go ahead|do it|ya|ye|betul|sahkan|teruskan|boleh|setuju)[.! ]*$/i.test(t);
+  const patterns = [
+    // Bahasa Melayu
+    /\b(ya|ye|betul|benar|sah|sahkan|setuju|dipersetujui)\b/,
+    /\b(saya|aku|kami)\s+(sahkan|bersetuju|setuju)\b/,
+    /\b(sila|tolong|boleh)\s+(hantar|teruskan|submit)\b/,
+    /\b(hantar|teruskan)\s+(laporan|report)\b/,
+    /\bmaklumat\s+(ini\s+)?(betul|tepat)\b/,
+    /\bsemua\s+(maklumat|butiran)\s+(betul|tepat)\b/,
+    /\btiada\s+(pembetulan|perubahan)\b/,
+
+    // English
+    /\b(yes|yeah|yep|correct|confirmed|confirm|approved|agreed)\b/,
+    /\bi\s+(confirm|agree|approve)\b/,
+    /\bplease\s+(submit|send|proceed)\b/,
+    /\b(go ahead|send it|submit it|that's correct)\b/,
+    /\beverything\s+is\s+(correct|right)\b/,
+    /\bthe\s+details\s+are\s+(correct|right)\b/
+  ];
+
+  return patterns.some(pattern => pattern.test(t));
 }
 
 function isRejection(text) {
-  const t = text.trim().toLowerCase();
+  const t = text.toLowerCase().trim();
 
-  return /^(no|nope|cancel|stop|don't|do not|tak|tidak|batal|jangan)[.! ]*$/i.test(t);
+  return /\b(no|nope|cancel|cancel it|do not submit|don't submit|jangan hantar|tak|tidak|batal|jangan|tak setuju)\b/i.test(t);
 }
 
 // Detect explicit commands such as:
