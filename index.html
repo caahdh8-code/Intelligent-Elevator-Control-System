@@ -1,847 +1,1025 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Intelligent Elevator & Hotel Assistant</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<title>Intelligent Elevator Control System</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #001c36, #003e68, #00618c);
+    color: white;
+    min-height: 100vh;
+    padding: 30px;
+}
+
+/* MAIN TITLE */
+.header {
+    text-align: center;
+    margin: 20px auto 35px;
+}
+
+.header h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    color: #35f5ff;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px #00dfff;
+}
+
+.header p {
+    margin-top: 12px;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+/* MAIN CONTAINER */
+.container {
+    width: 100%;
+    max-width: 1050px;
+    margin: auto;
+}
+
+/* PANELS */
+.panel {
+    border: 2px solid #39eaff;
+    border-radius: 28px;
+    padding: 30px;
+    margin-bottom: 25px;
+    background: rgba(0, 35, 65, 0.35);
+    box-shadow: 0 0 12px rgba(0, 225, 255, 0.15);
+}
+
+.panel h2 {
+    color: #37f3ff;
+    font-size: 28px;
+    margin-bottom: 25px;
+}
+
+/* SYSTEM INFORMATION */
+.info {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 2.5;
+}
+
+.status {
+    color: #43ff9b;
+}
+
+.error {
+    color: #ff5555;
+}
+
+/* FLOOR SELECTION */
+.floor-title {
+    color: #37f3ff;
+    font-size: 30px;
+    margin-bottom: 15px;
+}
+
+.floor-description {
+    margin-bottom: 25px;
+    font-size: 18px;
+}
+
+.floor-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.floor-btn {
+    min-height: 150px;
+    border: 3px solid #37eaff;
+    border-radius: 25px;
+    background: linear-gradient(145deg, #0089c9, #0063a5);
+    color: white;
+    font-size: 23px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.25s;
+    box-shadow: 0 0 10px rgba(0, 225, 255, 0.2);
+}
+
+.floor-btn:hover {
+    background: #00a9e8;
+    box-shadow: 0 0 20px #00eaff;
+    transform: translateY(-3px);
+}
+
+.floor-btn.selected {
+    background: #00c6ef;
+    border-color: white;
+    box-shadow: 0 0 22px #00eaff;
+}
+
+.floor-btn small {
+    display: block;
+    margin-top: 12px;
+    font-size: 17px;
+}
+
+/* CURRENT FLOOR */
+.current-display {
+    margin-top: 22px;
+    font-size: 18px;
+    color: #c9faff;
+    font-weight: bold;
+}
+
+/* AI BUTTON */
+.ai-button {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    border: none;
+    border-radius: 35px;
+    padding: 17px 24px;
+    background: #48e5f4;
+    color: #00334e;
+    font-weight: bold;
+    font-size: 17px;
+    cursor: pointer;
+    box-shadow: 0 0 18px #00dfff;
+    z-index: 10;
+}
+
+.ai-button:hover {
+    background: white;
+}
+
+/* AI CHAT WINDOW */
+.chat-window {
+    display: none;
+    position: fixed;
+    right: 25px;
+    bottom: 95px;
+    width: min(390px, calc(100vw - 30px));
+    height: 550px;
+    max-height: 75vh;
+    background: #002b49;
+    border: 2px solid #35eaff;
+    border-radius: 20px;
+    box-shadow: 0 0 25px rgba(0, 225, 255, 0.5);
+    z-index: 20;
+    overflow: hidden;
+}
+
+.chat-header {
+    background: #006c9e;
+    padding: 17px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+.chat-header button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.chat-messages {
+    height: calc(100% - 125px);
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.message {
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    font-size: 14px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.bot {
+    background: #064d70;
+    margin-right: 35px;
+}
+
+.user {
+    background: #008bbd;
+    margin-left: 35px;
+}
+
+.chat-input-area {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    background: #003653;
+    display: flex;
+    gap: 6px;
+}
+
+.chat-input-area input {
+    min-width: 0;
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+}
+
+.chat-input-area button {
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    background: #37eaff;
+    color: #00334e;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.chat-tools {
+    display: flex;
+    gap: 5px;
+}
+
+/* IMAGE PREVIEW */
+#imagePreview {
+    display: none;
+    max-width: 100%;
+    max-height: 120px;
+    margin: 5px 0;
+    border-radius: 10px;
+}
+
+/* NOTIFICATION */
+#notification {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #003c5e;
+    border: 1px solid #37eaff;
+    color: white;
+    padding: 15px 22px;
+    border-radius: 12px;
+    z-index: 50;
+    text-align: center;
+}
+
+/* MOBILE */
+@media (max-width: 650px) {
     body {
-      background: linear-gradient(135deg, #dceeff, #f5f9ff);
-      min-height: 100vh;
-      padding: 15px;
-      color: #1e293b;
+        padding: 15px;
     }
 
-    .container {
-      max-width: 650px;
-      margin: auto;
+    .panel {
+        padding: 20px;
     }
 
-    .header {
-      background: linear-gradient(135deg, #075985, #2563eb);
-      color: white;
-      padding: 25px 18px;
-      border-radius: 18px;
-      text-align: center;
-      margin-bottom: 18px;
-      box-shadow: 0 5px 15px #0002;
-    }
-
-    .header h1 {
-      font-size: 23px;
-      margin-bottom: 8px;
-    }
-
-    .header p {
-      font-size: 13px;
-      opacity: .9;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 14px #00000010;
-    }
-
-    h2 {
-      font-size: 18px;
-      margin-bottom: 15px;
-      color: #075985;
-    }
-
-    .status {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 13px;
-      margin-bottom: 10px;
-    }
-
-    .dot {
-      display: inline-block;
-      width: 9px;
-      height: 9px;
-      background: #16a34a;
-      border-radius: 50%;
-      margin-right: 5px;
-    }
-
-    .floor-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    button {
-      border: none;
-      border-radius: 10px;
-      padding: 13px;
-      background: #2563eb;
-      color: white;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
+    .floor-buttons {
+        grid-template-columns: 1fr;
     }
 
     .floor-btn {
-      padding: 20px 5px;
-      background: #eff6ff;
-      color: #1e40af;
-      border: 2px solid #bfdbfe;
-      font-weight: bold;
+        min-height: 110px;
     }
 
-    .floor-btn.selected {
-      background: #2563eb;
-      color: white;
-      border-color: #2563eb;
+    .chat-window {
+        right: 15px;
+        bottom: 85px;
     }
-
-    .primary {
-      width: 100%;
-      margin-top: 15px;
-      background: #075985;
-    }
-
-    .danger {
-      background: #dc2626;
-    }
-
-    .success {
-      color: #15803d;
-    }
-
-    .error {
-      color: #dc2626;
-    }
-
-    .message {
-      background: #eff6ff;
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 14px;
-      margin-top: 12px;
-      line-height: 1.5;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .small {
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 10px;
-      line-height: 1.5;
-    }
-
-    /* AI CHAT */
-
-    .chat-box {
-      height: 360px;
-      overflow-y: auto;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 12px;
-    }
-
-    .chat-message {
-      padding: 11px 13px;
-      border-radius: 13px;
-      margin-bottom: 10px;
-      max-width: 90%;
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .bot {
-      background: #e0f2fe;
-      color: #0c4a6e;
-      margin-right: auto;
-    }
-
-    .user {
-      background: #2563eb;
-      color: white;
-      margin-left: auto;
-    }
-
-    .chat-input-row {
-      display: flex;
-      gap: 7px;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 9px;
-      font-size: 14px;
-      background: white;
-    }
-
-    .chat-input-row input {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .tool-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .tool-row button {
-      flex: 1;
-      font-size: 12px;
-      background: #475569;
-    }
-
-    .image-preview {
-      max-width: 100%;
-      max-height: 160px;
-      margin-top: 10px;
-      border-radius: 10px;
-      display: none;
-    }
-
-    .footer {
-      text-align: center;
-      color: #64748b;
-      font-size: 12px;
-      padding: 15px;
-    }
-
-    @media(max-width: 420px) {
-      .header h1 {
-        font-size: 19px;
-      }
-
-      .chat-box {
-        height: 320px;
-      }
-    }
-  </style>
+}
+</style>
 </head>
 
 <body>
-<div class="container">
 
-  <header class="header">
-    <h1>🏨 Intelligent Hotel System</h1>
-    <p>Smart Elevator Control & Hotel AI Assistant</p>
-  </header>
+<div id="notification"></div>
 
-  <section class="card">
-    <h2>System Information</h2>
+<header class="header">
+    <h1>INTELLIGENT ELEVATOR</h1>
+    <p>Contactless Elevator Control System</p>
+</header>
 
-    <div class="status">
-      <span>Firebase Connection</span>
-      <span id="firebaseStatus">
-        <span class="dot"></span>Connecting...
-      </span>
+<main class="container">
+
+    <!-- SYSTEM INFORMATION -->
+    <section class="panel">
+
+        <h2>System Information</h2>
+
+        <div class="info">
+            Firebase Connection:
+            <span id="firebaseStatus">CONNECTING...</span>
+            <br>
+
+            Queue System:
+            <span id="queueStatus">CHECKING...</span>
+        </div>
+
+    </section>
+
+    <!-- FLOOR SELECTION -->
+    <section class="panel">
+
+        <h2 class="floor-title">SELECT CURRENT FLOOR</h2>
+
+        <p class="floor-description">
+            Please select your current floor.
+        </p>
+
+        <div class="floor-buttons">
+
+            <button class="floor-btn" onclick="selectFloor(1)" id="floor1">
+                1
+                <small>FLOOR 1</small>
+            </button>
+
+            <button class="floor-btn" onclick="selectFloor(2)" id="floor2">
+                2
+                <small>FLOOR 2</small>
+            </button>
+
+            <button class="floor-btn" onclick="selectFloor(3)" id="floor3">
+                3
+                <small>FLOOR 3</small>
+            </button>
+
+        </div>
+
+        <div class="current-display">
+            Current Floor:
+            <span id="currentFloorDisplay">Not Selected</span>
+        </div>
+
+    </section>
+
+</main>
+
+<!-- AI BUTTON -->
+<button class="ai-button" onclick="toggleChat()">
+    ✦ AI Assistant
+</button>
+
+<!-- AI CHAT -->
+<div class="chat-window" id="chatWindow">
+
+    <div class="chat-header">
+        <span>✦ AI Hotel Assistant</span>
+        <button onclick="toggleChat()">×</button>
     </div>
 
-    <div class="status">
-      <span>AI Assistant</span>
-      <span id="aiStatus">Checking...</span>
-    </div>
-  </section>
+    <div class="chat-messages" id="chatMessages">
 
-  <!-- ELEVATOR CONTROL -->
+        <div class="message bot">
+            Hello! Welcome to our hotel.
 
-  <section class="card">
-    <h2>🛗 Elevator Control</h2>
+            I am your AI Hotel Assistant.
 
-    <p class="small">Select your current floor.</p>
+            You can ask me about hotel facilities, elevator destinations or make an anonymous report.
 
-    <div class="floor-grid" id="currentFloors">
-      <button class="floor-btn" onclick="selectCurrent(1)">Floor 1</button>
-      <button class="floor-btn" onclick="selectCurrent(2)">Floor 2</button>
-      <button class="floor-btn" onclick="selectCurrent(3)">Floor 3</button>
+            How may I help you?
+        </div>
+
     </div>
 
-    <p id="currentDisplay" class="message">
-      Current Floor: Not selected
-    </p>
+    <div class="chat-input-area">
 
-    <p class="small">Select your destination floor.</p>
+        <div style="width:100%">
 
-    <div class="floor-grid" id="destinationFloors">
-      <button class="floor-btn" onclick="selectDestination(1)">Floor 1</button>
-      <button class="floor-btn" onclick="selectDestination(2)">Floor 2</button>
-      <button class="floor-btn" onclick="selectDestination(3)">Floor 3</button>
+            <img id="imagePreview">
+
+            <div style="display:flex;gap:6px">
+
+                <input
+                    type="text"
+                    id="chatInput"
+                    placeholder="Type your message..."
+                    onkeydown="if(event.key==='Enter') sendMessage()"
+                >
+
+                <button onclick="sendMessage()">Send</button>
+
+            </div>
+
+            <div class="chat-tools" style="margin-top:7px">
+
+                <button onclick="startVoice()">🎤</button>
+
+                <button onclick="document.getElementById('imageInput').click()">
+                    📷
+                </button>
+
+                <button onclick="clearImage()">✕ Image</button>
+
+            </div>
+
+            <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+                style="display:none"
+                onchange="selectImage(event)"
+            >
+
+        </div>
+
     </div>
-
-    <button class="primary" id="requestButton" onclick="submitRequest()">
-      Request Elevator
-    </button>
-
-    <div id="elevatorMessage" class="message hidden"></div>
-  </section>
-
-  <!-- AI ASSISTANT -->
-
-  <section class="card">
-    <h2>🤖 AI Hotel Assistant</h2>
-
-    <p class="small">
-      Ask about hotel facilities, elevator destinations, lost items,
-      complaints and other hotel assistance.
-    </p>
-
-    <div class="chat-box" id="chatBox">
-      <div class="chat-message bot">
-        Hello! Welcome to our hotel.
-
-        I am your AI Hotel Assistant. How can I help you today?
-
-        You can ask me questions, request the elevator or report an issue.
-      </div>
-    </div>
-
-    <div class="chat-input-row">
-      <input
-        type="text"
-        id="chatInput"
-        placeholder="Type your message..."
-        onkeydown="if(event.key==='Enter') sendMessage()"
-      >
-      <button onclick="sendMessage()">Send</button>
-    </div>
-
-    <div class="tool-row">
-      <button onclick="startVoice()">🎤 Voice</button>
-      <button onclick="toggleVoiceReply()" id="voiceReplyButton">🔊 Voice Reply: ON</button>
-      <button onclick="document.getElementById('imageInput').click()">📷 Image</button>
-    </div>
-
-    <input
-      type="file"
-      id="imageInput"
-      accept="image/*"
-      capture="environment"
-      class="hidden"
-      onchange="handleImage(event)"
-    >
-
-    <img id="imagePreview" class="image-preview" alt="Selected image">
-
-    <p class="small">
-      Voice input depends on browser support. Images are sent to the AI
-      backend only when you send your message.
-    </p>
-  </section>
-
-  <footer class="footer">
-    Intelligent Elevator Control System<br>
-    Hotel Assistance & Anonymous Reporting
-  </footer>
 
 </div>
 
 <script>
-/* =====================================
-   CONFIGURATION
-===================================== */
+
+/* ==================================
+   1. FIREBASE CONFIGURATION
+================================== */
+
+/*
+IMPORTANT:
+Masukkan Firebase configuration sebenar
+daripada Firebase Console.
+
+Jangan gunakan placeholder ini.
+*/
 
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "intelligent-elevator.firebaseapp.com",
-  databaseURL: "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "intelligent-elevator",
-  storageBucket: "intelligent-elevator.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID"
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "intelligent-elevator.firebaseapp.com",
+    databaseURL: "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "intelligent-elevator",
+    storageBucket: "intelligent-elevator.firebasestorage.app",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_FIREBASE_APP_ID"
 };
 
-const AI_API_URL =
-  "https://intelligent-elevator-control-system-ai.onrender.com/api/assistant";
-
-const REPORT_API_URL =
-  "https://intelligent-elevator-control-system-ai.onrender.com/api/report";
-
-/* =====================================
-   FIREBASE INITIALIZATION
-===================================== */
-
 let database = null;
-
-try {
-  firebase.initializeApp(firebaseConfig);
-  database = firebase.database();
-
-  document.getElementById("firebaseStatus").innerHTML =
-    '<span class="dot"></span>Connected';
-} catch (error) {
-  console.error("Firebase error:", error);
-
-  document.getElementById("firebaseStatus").textContent =
-    "Connection failed";
-}
-
-/* =====================================
-   ELEVATOR VARIABLES
-===================================== */
+let firebaseReady = false;
 
 let currentFloor = null;
-let destinationFloor = null;
-let sending = false;
-
-function selectCurrent(floor) {
-  currentFloor = floor;
-
-  document.getElementById("currentDisplay").textContent =
-    "Current Floor: Floor " + floor;
-
-  updateFloorButtons("currentFloors", floor);
-}
-
-function selectDestination(floor) {
-  destinationFloor = floor;
-
-  updateFloorButtons("destinationFloors", floor);
-}
-
-function updateFloorButtons(containerId, floor) {
-  const buttons =
-    document.getElementById(containerId).querySelectorAll("button");
-
-  buttons.forEach((button, index) => {
-    button.classList.toggle("selected", index + 1 === floor);
-  });
-}
-
-async function submitRequest(destinationOverride = null, currentOverride = null) {
-  if (sending) return;
-
-  const from = Number(currentOverride || currentFloor);
-  const to = Number(destinationOverride || destinationFloor);
-
-  if (![1, 2, 3].includes(from) || ![1, 2, 3].includes(to)) {
-    showElevatorMessage(
-      "Please select a valid current floor and destination floor.",
-      "error"
-    );
-    return false;
-  }
-
-  if (from === to) {
-    showElevatorMessage(
-      "You are already on this floor!",
-      "error"
-    );
-    return false;
-  }
-
-  if (!database) {
-    showElevatorMessage(
-      "Firebase is not connected. Please try again later.",
-      "error"
-    );
-    return false;
-  }
-
-  sending = true;
-  document.getElementById("requestButton").disabled = true;
-
-  try {
-    const queueRef = database.ref("/Elevator/Queue");
-
-    const request = {
-      currentFloor: from,
-      destinationFloor: to,
-      status: "WAITING",
-      createdAt: firebase.database.ServerValue.TIMESTAMP
-    };
-
-    await queueRef.push(request);
-
-    showElevatorMessage(
-      "Your elevator request has been submitted. Please wait for the lift to arrive at Floor " + to + ".",
-      "success"
-    );
-
-    currentFloor = from;
-    destinationFloor = null;
-
-    updateFloorButtons("destinationFloors", null);
-
-    return true;
-
-  } catch (error) {
-    console.error("Elevator request error:", error);
-
-    showElevatorMessage(
-      "Unable to submit elevator request. Please try again.",
-      "error"
-    );
-
-    return false;
-
-  } finally {
-    sending = false;
-    document.getElementById("requestButton").disabled = false;
-  }
-}
-
-function showElevatorMessage(message, type) {
-  const element = document.getElementById("elevatorMessage");
-
-  element.classList.remove("hidden", "success", "error");
-  element.classList.add(type);
-  element.textContent = message;
-}
-
-/* =====================================
-   AI CHAT VARIABLES
-===================================== */
-
-let conversationHistory = [];
 let selectedImage = null;
-let voiceReplyEnabled = true;
 
-function addMessage(message, sender) {
-  const chatBox = document.getElementById("chatBox");
-  const div = document.createElement("div");
+const AI_API_URL =
+"https://intelligent-elevator-control-system-ai.onrender.com/api/assistant";
 
-  div.className = "chat-message " + sender;
-  div.textContent = message;
+const REPORT_API_URL =
+"https://intelligent-elevator-control-system-ai.onrender.com/api/report";
 
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
 
-async function sendMessage() {
-  const input = document.getElementById("chatInput");
-  const message = input.value.trim();
+/* ==================================
+   2. INITIALIZE FIREBASE
+================================== */
 
-  if (!message && !selectedImage) return;
-
-  if (message) {
-    addMessage(message, "user");
-  }
-
-  if (selectedImage) {
-    addMessage("📷 Image attached", "user");
-  }
-
-  input.value = "";
-
-  const outgoingImage = selectedImage;
-  selectedImage = null;
-
-  document.getElementById("imagePreview").style.display = "none";
-
-  try {
-    const response = await fetch(AI_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: message || "Please describe this image.",
-        currentFloor: currentFloor,
-        history: conversationHistory,
-        image: outgoingImage
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error("AI server error: " + response.status);
-    }
-
-    const data = await response.json();
-
-    if (!data.reply) {
-      throw new Error("Invalid AI response");
-    }
-
-    addMessage(data.reply, "bot");
-
-    conversationHistory.push(
-      { role: "user", content: message || "Image attached" },
-      { role: "assistant", content: data.reply }
-    );
-
-    if (conversationHistory.length > 20) {
-      conversationHistory = conversationHistory.slice(-20);
-    }
-
-    if (voiceReplyEnabled) {
-      speak(data.reply);
-    }
-
-    /* AI ELEVATOR ACTION */
+try {
 
     if (
-      data.action === "submit" &&
-      Number.isInteger(Number(data.currentFloor)) &&
-      Number.isInteger(Number(data.destinationFloor))
+        firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY" ||
+        firebaseConfig.appId === "YOUR_FIREBASE_APP_ID" ||
+        firebaseConfig.messagingSenderId === "YOUR_MESSAGING_SENDER_ID"
     ) {
-      const confirmedCurrent = Number(data.currentFloor);
-      const confirmedDestination = Number(data.destinationFloor);
-
-      if (
-        [1, 2, 3].includes(confirmedCurrent) &&
-        [1, 2, 3].includes(confirmedDestination) &&
-        confirmedCurrent !== confirmedDestination
-      ) {
-        const success = await submitRequest(
-          confirmedDestination,
-          confirmedCurrent
-        );
-
-        if (success) {
-          addMessage(
-            "Elevator request successfully submitted.",
-            "bot"
-          );
-        }
-      }
+        throw new Error("Firebase configuration belum lengkap.");
     }
 
-    /* HOTEL REPORT ACTION */
+    firebase.initializeApp(firebaseConfig);
 
-    if (data.action === "report") {
-      if (!data.report || !data.report.type ||
-          !data.report.incidentFloor || !data.report.location) {
-        addMessage(
-          "I need the report type, incident floor and location before submitting the report.",
-          "bot"
-        );
-        return;
-      }
+    database = firebase.database();
 
-      await submitHotelReport(data.report);
-    }
+    database.ref(".info/connected").on("value", function(snapshot) {
 
-  } catch (error) {
-    console.error(error);
+        firebaseReady = snapshot.val() === true;
 
-    addMessage(
-      "AI connection failed. Please try again later.",
-      "bot"
-    );
-  }
-}
+        const status = document.getElementById("firebaseStatus");
 
-/* =====================================
-   HOTEL ANONYMOUS REPORT
-===================================== */
+        status.textContent = firebaseReady ? "CONNECTED" : "DISCONNECTED";
 
-async function submitHotelReport(report) {
-  const allowedTypes = [
-    "Lost Item",
-    "Suspicious Person",
-    "Facility Damage",
-    "General Complaint",
-    "Other"
-  ];
+        status.className = firebaseReady ? "status" : "error";
 
-  if (
-    !allowedTypes.includes(report.type) ||
-    ![1, 2, 3].includes(Number(report.incidentFloor)) ||
-    typeof report.location !== "string" ||
-    !report.location.trim()
-  ) {
-    addMessage(
-      "The report details are incomplete. Please provide the report type, floor and location.",
-      "bot"
-    );
-    return;
-  }
-
-  try {
-    const response = await fetch(REPORT_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        reportType: report.type,
-        incidentFloor: Number(report.incidentFloor),
-        location: report.location.trim(),
-        description: report.description || "",
-        reporter: "Anonymous",
-        image: null
-      })
     });
 
-    const result = await response.json();
+    database.ref("/Elevator/Queue").on("value", function(snapshot) {
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "Report submission failed");
+        document.getElementById("queueStatus").textContent =
+            "READY";
+
+        document.getElementById("queueStatus").className = "status";
+
+    }, function(error) {
+
+        document.getElementById("queueStatus").textContent =
+            "ERROR";
+
+        document.getElementById("queueStatus").className = "error";
+
+    });
+
+} catch(error) {
+
+    console.error("Firebase error:", error);
+
+    document.getElementById("firebaseStatus").textContent =
+        "NOT CONFIGURED";
+
+    document.getElementById("firebaseStatus").className = "error";
+
+    document.getElementById("queueStatus").textContent =
+        "NOT READY";
+
+    document.getElementById("queueStatus").className = "error";
+}
+
+
+/* ==================================
+   3. NOTIFICATION
+================================== */
+
+function showNotification(message) {
+
+    const box = document.getElementById("notification");
+
+    box.textContent = message;
+
+    box.style.display = "block";
+
+    setTimeout(function() {
+        box.style.display = "none";
+    }, 3500);
+
+}
+
+
+/* ==================================
+   4. CURRENT FLOOR
+================================== */
+
+function selectFloor(floor) {
+
+    currentFloor = floor;
+
+    document.getElementById("currentFloorDisplay").textContent =
+        "Floor " + floor;
+
+    for(let i = 1; i <= 3; i++) {
+
+        document.getElementById("floor" + i)
+            .classList.remove("selected");
+
     }
 
-    addMessage(
-      "Your anonymous report has been submitted successfully. Report ID: " +
-      result.reportId,
-      "bot"
-    );
+    document.getElementById("floor" + floor)
+        .classList.add("selected");
 
-  } catch (error) {
-    console.error("Report error:", error);
-
-    addMessage(
-      "Sorry, the report could not be submitted. Please try again later or contact hotel staff directly.",
-      "bot"
-    );
-  }
 }
 
-/* =====================================
-   IMAGE UPLOAD
-===================================== */
 
-function handleImage(event) {
-  const file = event.target.files[0];
+/* ==================================
+   5. ELEVATOR REQUEST
+================================== */
 
-  if (!file) return;
+async function submitRequest(destinationFloor, overrideCurrentFloor) {
 
-  if (!file.type.startsWith("image/")) {
-    addMessage("Please select a valid image.", "bot");
-    return;
-  }
+    const origin = Number(overrideCurrentFloor || currentFloor);
+    const destination = Number(destinationFloor);
 
-  if (file.size > 5 * 1024 * 1024) {
-    addMessage(
-      "Image is too large. Please select an image below 5 MB.",
-      "bot"
-    );
-    event.target.value = "";
-    return;
-  }
+    if (!firebaseReady || !database) {
 
-  const reader = new FileReader();
+        showNotification("Firebase is not connected.");
 
-  reader.onload = function(e) {
-    selectedImage = e.target.result;
+        return false;
 
-    const preview = document.getElementById("imagePreview");
-    preview.src = selectedImage;
-    preview.style.display = "block";
-  };
+    }
 
-  reader.readAsDataURL(file);
+    if (![1, 2, 3].includes(origin) ||
+        ![1, 2, 3].includes(destination)) {
+
+        showNotification("Please select a valid floor.");
+
+        return false;
+
+    }
+
+    if (origin === destination) {
+
+        showNotification("You are already on this floor!");
+
+        return false;
+
+    }
+
+    try {
+
+        const requestData = {
+
+            currentFloor: origin,
+
+            destinationFloor: destination,
+
+            status: "WAITING",
+
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+
+        };
+
+        await database.ref("/Elevator/Queue").push(requestData);
+
+        showNotification(
+            "Elevator request sent. Please wait!"
+        );
+
+        return true;
+
+    } catch(error) {
+
+        console.error("Queue error:", error);
+
+        showNotification("Unable to submit elevator request.");
+
+        return false;
+
+    }
+
 }
 
-/* =====================================
-   VOICE INPUT
-===================================== */
+
+/* ==================================
+   6. AI CHAT WINDOW
+================================== */
+
+function toggleChat() {
+
+    const chat = document.getElementById("chatWindow");
+
+    chat.style.display =
+        chat.style.display === "block" ? "none" : "block";
+
+}
+
+
+/* ==================================
+   7. CHAT MESSAGE
+================================== */
+
+function addMessage(message, sender) {
+
+    const messages = document.getElementById("chatMessages");
+
+    const div = document.createElement("div");
+
+    div.className = "message " + sender;
+
+    div.textContent = message;
+
+    messages.appendChild(div);
+
+    messages.scrollTop = messages.scrollHeight;
+
+}
+
+
+/* ==================================
+   8. SEND MESSAGE TO AI
+================================== */
+
+async function sendMessage() {
+
+    const input = document.getElementById("chatInput");
+
+    const message = input.value.trim();
+
+    if (!message && !selectedImage) return;
+
+    if (message) {
+        addMessage(message, "user");
+    } else {
+        addMessage("Please analyse this image.", "user");
+    }
+
+    input.value = "";
+
+    const imageToSend = selectedImage;
+
+    selectedImage = null;
+
+    document.getElementById("imagePreview").style.display = "none";
+
+    addMessage("Please wait, I am processing your request...", "bot");
+
+    const messages = document.getElementById("chatMessages");
+
+    const loadingMessage = messages.lastElementChild;
+
+    try {
+
+        const response = await fetch(AI_API_URL, {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                message: message || "Please analyse the uploaded image.",
+
+                currentFloor: currentFloor,
+
+                history: [],
+
+                image: imageToSend
+
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(data.error || "AI service error.");
+
+        }
+
+        loadingMessage.remove();
+
+        const reply = data.reply || "Sorry, I could not process your request.";
+
+        addMessage(reply, "bot");
+
+        speak(reply);
+
+        /* AI ELEVATOR REQUEST */
+
+        if (data.action === "submit") {
+
+            const destination = Number(data.destinationFloor);
+
+            if (!currentFloor) {
+
+                addMessage(
+                    "Please select your current floor first.",
+                    "bot"
+                );
+
+                return;
+
+            }
+
+            if (Number(data.currentFloor) !== Number(currentFloor)) {
+
+                addMessage(
+                    "Your current floor does not match the selected floor. Please confirm your current floor again.",
+                    "bot"
+                );
+
+                return;
+
+            }
+
+            if (![1, 2, 3].includes(destination)) {
+
+                addMessage(
+                    "Invalid destination floor.",
+                    "bot"
+                );
+
+                return;
+
+            }
+
+            /*
+            AI must ask confirmation first.
+            The frontend only submits when the backend
+            returns action = submit after confirmation.
+            */
+
+            await submitRequest(destination, currentFloor);
+
+        }
+
+        /* ANONYMOUS HOTEL REPORT */
+
+        if (data.action === "report" && data.report) {
+
+            await submitHotelReport(data.report);
+
+        }
+
+    } catch(error) {
+
+        console.error("AI error:", error);
+
+        loadingMessage.remove();
+
+        addMessage(
+            "Sorry, the AI Assistant is currently unavailable. Please try again later.",
+            "bot"
+        );
+
+    }
+
+}
+
+
+/* ==================================
+   9. ANONYMOUS HOTEL REPORT
+================================== */
+
+async function submitHotelReport(report) {
+
+    if (!report) return;
+
+    try {
+
+        const response = await fetch(REPORT_API_URL, {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                reportType: report.type,
+
+                incidentFloor: report.incidentFloor,
+
+                location: report.location,
+
+                description: report.description || "",
+
+                reporter: "Anonymous",
+
+                image: null
+
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(data.error || "Report submission failed.");
+
+        }
+
+        addMessage(
+            "Your anonymous report has been submitted successfully.\n\nReport ID: " +
+            (data.reportId || "Generated") +
+            "\n\nThank you for informing our hotel.",
+            "bot"
+        );
+
+    } catch(error) {
+
+        console.error("Report error:", error);
+
+        addMessage(
+            "Sorry, your report could not be submitted. Please try again later.",
+            "bot"
+        );
+
+    }
+
+}
+
+
+/* ==================================
+   10. IMAGE UPLOAD
+================================== */
+
+function selectImage(event) {
+
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+
+        showNotification("Please select an image file.");
+
+        return;
+
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+
+        showNotification("Image must be smaller than 5MB.");
+
+        return;
+
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+
+        selectedImage = e.target.result;
+
+        const preview = document.getElementById("imagePreview");
+
+        preview.src = selectedImage;
+
+        preview.style.display = "block";
+
+    };
+
+    reader.readAsDataURL(file);
+
+}
+
+function clearImage() {
+
+    selectedImage = null;
+
+    document.getElementById("imagePreview").style.display = "none";
+
+    document.getElementById("imageInput").value = "";
+
+}
+
+
+/* ==================================
+   11. VOICE INPUT
+================================== */
 
 function startVoice() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  if (!SpeechRecognition) {
-    addMessage(
-      "Voice input is not supported by this browser. Please type your message.",
-      "bot"
-    );
-    return;
-  }
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
 
-  const recognition = new SpeechRecognition();
+    if (!SpeechRecognition) {
 
-  recognition.lang = "ms-MY";
-  recognition.interimResults = false;
-  recognition.continuous = false;
+        showNotification("Voice input is not supported by this browser.");
 
-  recognition.onstart = function() {
-    addMessage("Listening... Please speak now.", "bot");
-  };
+        return;
 
-  recognition.onresult = function(event) {
-    const transcript = event.results[0][0].transcript;
+    }
 
-    document.getElementById("chatInput").value = transcript;
-    sendMessage();
-  };
+    const recognition = new SpeechRecognition();
 
-  recognition.onerror = function(event) {
-    console.error("Voice error:", event.error);
+    recognition.lang = "ms-MY";
 
-    addMessage(
-      "Unable to recognize your voice. Please try again or type your message.",
-      "bot"
-    );
-  };
+    recognition.continuous = false;
 
-  recognition.start();
+    recognition.interimResults = false;
+
+    recognition.onresult = function(event) {
+
+        const spokenText =
+            event.results[0][0].transcript;
+
+        document.getElementById("chatInput").value =
+            spokenText;
+
+    };
+
+    recognition.onerror = function() {
+
+        showNotification("Voice recognition failed.");
+
+    };
+
+    recognition.start();
+
 }
 
-/* =====================================
-   VOICE REPLY
-===================================== */
 
-function speak(message) {
-  if (!("speechSynthesis" in window)) return;
+/* ==================================
+   12. AI VOICE REPLY
+================================== */
 
-  window.speechSynthesis.cancel();
+function speak(text) {
 
-  const speech = new SpeechSynthesisUtterance(message);
-  speech.lang = "ms-MY";
-  speech.rate = 1;
+    if (!("speechSynthesis" in window)) return;
 
-  window.speechSynthesis.speak(speech);
-}
-
-function toggleVoiceReply() {
-  voiceReplyEnabled = !voiceReplyEnabled;
-
-  document.getElementById("voiceReplyButton").textContent =
-    voiceReplyEnabled ? "🔊 Voice Reply: ON" : "🔇 Voice Reply: OFF";
-
-  if (!voiceReplyEnabled && "speechSynthesis" in window) {
     window.speechSynthesis.cancel();
-  }
+
+    const speech = new SpeechSynthesisUtterance(text);
+
+    speech.lang = "en-US";
+
+    speech.rate = 1;
+
+    window.speechSynthesis.speak(speech);
+
 }
 
-/* =====================================
-   AI HEALTH CHECK
-===================================== */
-
-async function checkAI() {
-  try {
-    const response = await fetch(
-      "https://intelligent-elevator-control-system-ai.onrender.com/api/health"
-    );
-
-    if (!response.ok) throw new Error("AI offline");
-
-    const result = await response.json();
-
-    document.getElementById("aiStatus").textContent =
-      result.aiConfigured ? "Online" : "API key not configured";
-
-  } catch (error) {
-    document.getElementById("aiStatus").textContent = "Offline";
-  }
-}
-
-checkAI();
 </script>
 
 </body>
