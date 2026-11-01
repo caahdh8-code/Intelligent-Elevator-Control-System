@@ -33,7 +33,6 @@ const FACILITIES = {
     "Hotel Office",
     "Public Toilet"
   ],
-
   2: [
     "Standard Room",
     "Deluxe Room",
@@ -43,7 +42,6 @@ const FACILITIES = {
     "Laundry Room",
     "Guest Lounge"
   ],
-
   3: [
     "Swimming Pool",
     "Gymnasium",
@@ -61,7 +59,11 @@ const FACILITIES = {
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || origin === WEBSITE_URL) {
+    if (
+      !origin ||
+      origin === WEBSITE_URL ||
+      origin === "https://caahdh8-code.github.io"
+    ) {
       return callback(null, true);
     }
 
@@ -69,81 +71,19 @@ app.use(cors({
   }
 }));
 
-app.use(express.json({
-  limit: "1mb"
-}));
+app.use(express.json({limit:"1mb"}));
 
 // ======================================
-// HELPER FUNCTIONS
+// HELPERS
 // ======================================
 
 function validFloor(floor) {
   return (
-    floor !== null &&
-    floor !== undefined &&
-    floor !== "" &&
     Number.isInteger(Number(floor)) &&
     Number(floor) >= 1 &&
     Number(floor) <= 3
   );
 }
-
-// ======================================
-// DETECT CURRENT FLOOR FROM USER MESSAGE
-// ======================================
-
-function extractCurrentFloor(message) {
-  if (!message || typeof message !== "string") {
-    return null;
-  }
-
-  const text = message.toLowerCase();
-
-  const wordFloors = {
-    one: 1,
-    first: 1,
-    satu: 1,
-    dua: 2,
-    two: 2,
-    second: 2,
-    tiga: 3,
-    three: 3,
-    third: 3
-  };
-
-  const patterns = [
-    /\b(?:i am|i'm|im|currently at|currently on|from|starting from|my current floor is)\s+(?:floor\s*)?([1-3])\b/i,
-
-    /\b(?:saya|aku)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dari|dekat)\s+(?:tingkat\s*)?([1-3])\b/i,
-
-    /\b(?:sekarang|current floor)\s*(?:saya\s*)?(?:ialah|adalah|is)?\s*(?:floor|tingkat)?\s*([1-3])\b/i,
-
-    /\b(?:tingkat|floor)\s*([1-3])\s*(?:sekarang|current)\b/i
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-
-    if (match) {
-      return Number(match[1]);
-    }
-  }
-
-  const wordPattern =
-    /\b(?:i am|i'm|im|from|at|saya|aku|di|dari)\s+(?:floor\s*|tingkat\s*)?(one|first|satu|two|second|dua|three|third|tiga)\b/i;
-
-  const wordMatch = text.match(wordPattern);
-
-  if (wordMatch) {
-    return wordFloors[wordMatch[1].toLowerCase()] || null;
-  }
-
-  return null;
-}
-
-// ======================================
-// JSON RESPONSE PARSER
-// ======================================
 
 function parseAIJson(content) {
   if (!content || typeof content !== "string") {
@@ -162,139 +102,76 @@ function parseAIJson(content) {
   const lastBrace = cleaned.lastIndexOf("}");
 
   if (firstBrace === -1 || lastBrace === -1) {
-    const error = new Error(
-      "AI did not return a valid JSON object"
-    );
-
-    error.code = "invalid_json_response";
-    throw error;
+    throw new Error("AI did not return a valid JSON object");
   }
 
-  cleaned = cleaned.substring(
-    firstBrace,
-    lastBrace + 1
+  return JSON.parse(
+    cleaned.substring(firstBrace, lastBrace + 1)
   );
-
-  try {
-    return JSON.parse(cleaned);
-  } catch (error) {
-    const parseError = new Error(
-      "AI returned invalid JSON: " + error.message
-    );
-
-    parseError.code = "invalid_json_response";
-    throw parseError;
-  }
 }
 
 // ======================================
-// GROQ AI FUNCTION
+// GROQ AI
 // ======================================
 
 async function callGroq(messages) {
   if (!GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is missing in Render Environment");
+  }
+
+  const response = await fetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages,
+        temperature: 0.1,
+        response_format: {type:"json_object"}
+      })
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    console.error("Groq error:", result);
+
     throw new Error(
-      "GROQ_API_KEY is missing in Render Environment"
+      result.error?.message || "AI service request failed"
     );
   }
 
-  async function sendRequest(useJsonMode) {
-    const requestBody = {
-      model: GROQ_MODEL,
-      messages,
-      temperature: 0.2
-    };
+  const content = result.choices?.[0]?.message?.content;
 
-    if (useJsonMode) {
-      requestBody.response_format = {
-        type: "json_object"
-      };
-    }
-
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-
-        headers: {
-          "Authorization": `Bearer ${GROQ_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify(requestBody)
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error("Groq error:", result);
-
-      const error = new Error(
-        result.error?.message ||
-        "AI service request failed"
-      );
-
-      error.code = result.error?.code;
-      error.status = response.status;
-
-      throw error;
-    }
-
-    const content =
-      result.choices?.[0]?.message?.content;
-
-    return parseAIJson(content);
-  }
-
-  try {
-    return await sendRequest(true);
-
-  } catch (error) {
-    console.error(
-      "Groq first attempt failed:",
-      error.message
-    );
-
-    if (
-      error.code === "json_validate_failed" ||
-      error.code === "invalid_json_response"
-    ) {
-      console.log(
-        "Retrying Groq without JSON mode..."
-      );
-
-      return await sendRequest(false);
-    }
-
-    throw error;
-  }
+  return parseAIJson(content);
 }
 
 // ======================================
-// AI SYSTEM PROMPT
+// SYSTEM PROMPT
 // ======================================
 
 const SYSTEM_PROMPT = `
-You are the intelligent AI assistant for a hotel elevator system.
+You are the Hotel AI Assistant for an Intelligent Elevator System.
 
-Your responsibilities:
+You must understand natural language in:
+- English
+- Bahasa Melayu
+- Informal Malay
+- Common spelling variations
+- Voice-transcribed messages
 
-1. Answer hotel-related questions.
-2. Help guests find hotel facilities.
-3. Understand natural language.
-4. Understand Malay and English.
-5. Understand mixed Malay-English sentences.
-6. Help guests request elevator transportation.
-7. Understand voice-transcribed messages.
+Your tasks:
+1. Answer hotel questions.
+2. Identify hotel facilities and their floors.
+3. Understand elevator destination requests.
+4. Ask for confirmation before a lift request is submitted.
 
-Always return one valid JSON object.
-Never use Markdown.
-Never write outside the JSON object.
-
-======================================
-HOTEL FLOOR DIRECTORY
-======================================
+HOTEL DIRECTORY
 
 FLOOR 1:
 ${FACILITIES[1].join(", ")}
@@ -305,211 +182,93 @@ ${FACILITIES[2].join(", ")}
 FLOOR 3:
 ${FACILITIES[3].join(", ")}
 
-======================================
-UNDERSTANDING USER INTENT
-======================================
+FACILITY LOCATION RULES
 
-Understand what the guest means, not only exact keywords.
+- Cafe, restaurant and reception are on Floor 1.
+- Guest rooms are on Floor 2.
+- Swimming pool, gymnasium, spa and sauna are on Floor 3.
+- Gym means Gymnasium.
+- Pool means Swimming Pool.
+- Do not invent facilities.
 
-Examples:
-
-- "Saya nak pergi cafe."
-- "Boleh bawa saya ke cafe?"
-- "I want to get some coffee."
-- "Take me to the restaurant."
-- "Saya nak makan."
-- "I want to exercise."
-- "Where can I swim?"
-- "Can you send me to the spa?"
-- "Saya nak berehat dekat sauna."
-
-Recognize natural language, common expressions,
-short commands, informal language and common spelling mistakes.
-
-Do not assume every message is an elevator request.
-
-======================================
-HOTEL LOCATION RULES
-======================================
-
-FLOOR 1:
-Cafe, Restaurant, Reception, Front Desk,
-Main Entrance, Waiting Lounge, Meeting Room,
-Hotel Office and Public Toilet.
-
-FLOOR 2:
-Standard Room, Deluxe Room, Twin Room,
-Family Room, Housekeeping Room, Laundry Room
-and Guest Lounge.
-
-FLOOR 3:
-Swimming Pool, Gymnasium, Spa and Massage,
-Sauna, Rooftop Restaurant, Sky Lounge
-and Kids Playroom.
-
-Rules:
-
-- Never invent a hotel facility.
-- Answer location questions using this directory.
-- Tell the guest the correct floor.
-- If the facility is not listed, explain politely.
-- Do not confuse a location question with a lift request.
-
-======================================
 CURRENT FLOOR RULES
-======================================
 
-The website may provide the guest's current floor.
+- The website may provide the current floor.
+- If currentFloor is provided, use it.
+- Never ask for the current floor again if it has already been provided.
+- If currentFloor is null, ask the guest for their current floor.
+- If the guest says "floor 2", "tingkat 2", "dua", or "I'm on floor 2", understand that as their current floor when answering a question about their location.
+- Never guess the current floor.
 
-The guest may also state their current floor
-in their message.
+ELEVATOR REQUEST RULES
 
-Examples:
+Understand requests such as:
+- Saya dari tingkat 2 dan nak ke gym.
+- Saya sekarang di tingkat 1, nak pergi swimming pool.
+- Bawa saya ke cafe.
+- Saya nak ke bilik Deluxe.
+- Take me to the swimming pool.
+- Please send the lift to Floor 3.
+- I am on Floor 2 and want to go to the gym.
+- Can you bring me to the restaurant?
 
-- "Saya di tingkat 2."
-- "Saya berada di floor 1."
-- "I'm currently on Floor 3."
-- "I am at the second floor."
-- "My current floor is 1."
+When the guest asks to go to a facility:
+1. Identify its floor using the directory.
+2. Check the current floor.
+3. If current floor is missing, ask for it.
+4. If current floor equals destination floor, say "You are already here!"
+5. Otherwise, ask the guest to confirm.
 
-IMPORTANT:
-
-1. If the guest explicitly states their current floor,
-   use the floor stated in their latest message.
-
-2. Otherwise, use the current floor provided by the website.
-
-3. Never guess the current floor.
-
-4. If current floor is unknown, ask the guest.
-
-5. Valid floors are only Floor 1, Floor 2 and Floor 3.
-
-======================================
-SMART ELEVATOR RULES
-======================================
-
-When a guest requests elevator transportation:
-
-1. Understand the requested destination.
-2. Identify the destination floor from the hotel directory.
-3. Identify the current floor.
-4. Check whether both floors are valid.
-5. If current floor is unknown, ask the guest.
-6. If destination is unclear, ask for clarification.
-7. If current floor equals destination floor,
-   reply that the guest is already there.
-8. If both floors are valid and different,
-   ask the guest for confirmation.
-
-Examples:
-
-User:
-"Saya di tingkat 2 dan nak pergi cafe."
-
-Current Floor: 2
-Destination Floor: 1
-
-User:
-"I'm on Floor 1. Take me to the gym."
-
-Current Floor: 1
-Destination Floor: 3
-
-User:
-"Saya dari tingkat 3 nak pergi reception."
-
-Current Floor: 3
-Destination Floor: 1
-
-User:
-"Take me to the swimming pool."
-
-Destination Floor: 3
-
-If current floor is unknown,
-ask the guest which floor they are currently on.
-
-======================================
-ELEVATOR CONFIRMATION
-======================================
-
-When both floors are valid and different,
-return:
+When a destination is identified and current floor is known, return:
 
 {
   "action": "confirm_lift",
-  "reply": "You are currently on Floor 2. Your destination is Floor 1 (Cafe). Would you like me to send the lift?",
-  "destinationFloor": 1
+  "reply": "You are currently on Floor 2. Your destination is the Gymnasium on Floor 3. Would you like me to send the lift?",
+  "destinationFloor": 3
 }
 
-Rules:
+CONFIRMATION RULES
 
-- Always ask for confirmation.
-- Never submit a request directly.
-- Never use action "submit".
-- The website handles YES and NO.
-- Never claim the lift has moved.
-- Never claim the lift has arrived.
-- The website sends the actual request to Firebase.
+- Never submit a lift request yourself.
+- The website handles the YES or NO response.
+- Never return action "submit".
+- Only return "confirm_lift" when destination is clear and current floor is known.
+- Never claim the lift has physically moved or arrived.
 
-======================================
-VOICE ASSISTANT
-======================================
+NORMAL QUESTIONS
 
-Voice messages are already converted into text.
+If the guest asks where a facility is, answer its floor.
+If the guest asks general hotel questions, answer politely.
+If the message is unclear, ask a simple clarification question.
 
-Treat voice messages exactly like typed messages.
+LANGUAGE
 
-Understand Malay and English voice transcripts.
+- Reply in the same language used by the guest.
+- Use natural and simple Malay or English.
+- Do not combine Malay and English unnecessarily.
 
-If a voice transcript is unclear,
-ask the guest to repeat the message.
+OUTPUT FORMAT
 
-Do not claim that the microphone is active.
+Always return one valid JSON object.
+Do not include Markdown.
+Do not include text outside JSON.
 
-======================================
-GENERAL HOTEL QUESTIONS
-======================================
-
-For normal hotel questions:
-
-- Reply naturally.
-- Be polite and helpful.
-- Use simple language.
-- Answer only using known hotel information.
-- Do not create elevator requests unnecessarily.
-
-======================================
-RESPONSE FORMAT
-======================================
-
-NORMAL CHAT:
-
+For normal chat:
 {
   "action": "chat",
   "reply": "Your answer"
 }
 
-ELEVATOR CONFIRMATION:
-
+For elevator confirmation:
 {
   "action": "confirm_lift",
-  "reply": "You are currently on Floor 1. Your destination is Floor 3. Would you like me to send the lift?",
+  "reply": "Your confirmation question",
   "destinationFloor": 3
 }
-
-IMPORTANT:
-
-Always return valid JSON.
-Only use action "chat" or "confirm_lift".
-Never bypass confirmation.
-Never invent hotel information.
-Never claim physical elevator movement.
 `;
 
 // ======================================
-// HOME PAGE
+// HOME
 // ======================================
 
 app.get("/", (req, res) => {
@@ -526,7 +285,8 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     status: "healthy",
-    aiConfigured: Boolean(GROQ_API_KEY)
+    aiConfigured: Boolean(GROQ_API_KEY),
+    model: GROQ_MODEL
   });
 });
 
@@ -542,19 +302,15 @@ app.post("/api/assistant", async (req, res) => {
       history = []
     } = req.body;
 
-    if (
-      !message ||
-      typeof message !== "string"
-    ) {
+    if (!message || typeof message !== "string") {
       return res.status(400).json({
         error: "Message is required"
       });
     }
 
     if (
-      currentFloor !== undefined &&
       currentFloor !== null &&
-      currentFloor !== "" &&
+      currentFloor !== undefined &&
       !validFloor(currentFloor)
     ) {
       return res.status(400).json({
@@ -568,10 +324,6 @@ app.post("/api/assistant", async (req, res) => {
       });
     }
 
-    // ======================================
-    // SAFE CHAT HISTORY
-    // ======================================
-
     const safeHistory = history
       .filter(item =>
         item &&
@@ -580,61 +332,26 @@ app.post("/api/assistant", async (req, res) => {
       )
       .slice(-10);
 
-    // ======================================
-    // DETECT CURRENT FLOOR
-    // ======================================
-
-    const detectedFloor =
-      extractCurrentFloor(message);
-
-    const effectiveCurrentFloor =
-      detectedFloor ||
-      (
-        validFloor(currentFloor)
-          ? Number(currentFloor)
-          : null
-      );
-
-    console.log("User message:", message);
-    console.log("Website current floor:", currentFloor);
-    console.log("Detected current floor:", detectedFloor);
-    console.log("Effective current floor:", effectiveCurrentFloor);
-
-    // ======================================
-    // PREPARE AI MESSAGES
-    // ======================================
+    const systemMessage = {
+      role: "system",
+      content:
+        SYSTEM_PROMPT +
+        "\n\nCURRENT FLOOR PROVIDED BY WEBSITE: " +
+        (
+          currentFloor === null || currentFloor === undefined
+            ? "Not provided"
+            : String(currentFloor)
+        )
+    };
 
     const messages = [
-      {
-        role: "system",
-
-        content:
-          SYSTEM_PROMPT +
-
-          "\n\nGuest current floor: " +
-          (
-            effectiveCurrentFloor ||
-            "Not provided"
-          ) +
-
-          "\n\nIf the latest user message explicitly " +
-          "states a current floor, use that floor. " +
-
-          "\nIf the current floor is not known, " +
-          "ask the guest instead of guessing."
-      },
-
+      systemMessage,
       ...safeHistory,
-
       {
         role: "user",
         content: message
       }
     ];
-
-    // ======================================
-    // CALL GROQ AI
-    // ======================================
 
     const data = await callGroq(messages);
 
@@ -642,101 +359,53 @@ app.post("/api/assistant", async (req, res) => {
       !data ||
       typeof data.reply !== "string"
     ) {
-      throw new Error(
-        "Invalid AI response format"
-      );
+      throw new Error("Invalid AI response format");
     }
 
-    console.log("AI action:", data.action);
-    console.log("AI reply:", data.reply);
-    console.log(
-      "AI destination:",
-      data.destinationFloor
-    );
-
     // ======================================
-    // VALIDATE ELEVATOR REQUEST
+    // VALIDATE DESTINATION
     // ======================================
 
-    if (
-      data.action === "confirm_lift" ||
-      data.action === "submit"
-    ) {
+    if (data.action === "confirm_lift") {
 
-      // Current floor is missing.
-      if (!validFloor(effectiveCurrentFloor)) {
-        return res.json({
-          action: "chat",
-
-          reply:
-            "May I know which floor you are currently on? " +
-            "/ Boleh saya tahu anda berada di tingkat berapa sekarang?"
-        });
-      }
-
-      // Destination is invalid.
-      if (!validFloor(data.destinationFloor)) {
-        return res.json({
-          action: "chat",
-
-          reply:
-            "May I know which floor or hotel facility " +
-            "you would like to visit?"
-        });
-      }
-
-      // Same floor.
       if (
-        Number(effectiveCurrentFloor) ===
-        Number(data.destinationFloor)
+        !validFloor(data.destinationFloor) ||
+        !validFloor(currentFloor)
       ) {
+        return res.json({
+          action: "chat",
+          reply: !validFloor(currentFloor)
+            ? "May I know which floor you are currently on?"
+            : "Please tell me your destination floor again."
+        });
+      }
+
+      const current = Number(currentFloor);
+      const destination = Number(data.destinationFloor);
+
+      if (current === destination) {
         return res.json({
           action: "chat",
           reply: "You are already here!"
         });
       }
 
-      // Attach validated floor information.
-      data.currentFloor =
-        Number(effectiveCurrentFloor);
-
-      data.destinationFloor =
-        Number(data.destinationFloor);
-    }
-
-    // ======================================
-    // PREVENT DIRECT SUBMISSION
-    // ======================================
-
-    if (data.action === "submit") {
       return res.json({
-        action: "chat",
-
-        reply:
-          "Please confirm the elevator destination first."
+        action: "confirm_lift",
+        reply: data.reply,
+        currentFloor: current,
+        destinationFloor: destination
       });
     }
 
-    // ======================================
-    // ALLOW SUPPORTED ACTIONS ONLY
-    // ======================================
+    // Do not allow AI to submit directly.
+    return res.json({
+      action: "chat",
+      reply: data.reply
+    });
 
-    if (
-      data.action !== "chat" &&
-      data.action !== "confirm_lift"
-    ) {
-      data.action = "chat";
-      delete data.destinationFloor;
-      delete data.currentFloor;
-    }
-
-    return res.json(data);
-
-  } catch (error) {
-    console.error(
-      "Assistant error:",
-      error
-    );
+  } catch(error) {
+    console.error("Assistant error:", error);
 
     return res.status(500).json({
       error: "AI assistant is temporarily unavailable",
@@ -750,10 +419,7 @@ app.post("/api/assistant", async (req, res) => {
 // ======================================
 
 app.use((error, req, res, next) => {
-  console.error(
-    "Server error:",
-    error.message
-  );
+  console.error("Server error:", error.message);
 
   res.status(500).json({
     error: "Internal server error"
@@ -765,11 +431,6 @@ app.use((error, req, res, next) => {
 // ======================================
 
 app.listen(PORT, () => {
-  console.log(
-    `Server running on port ${PORT}`
-  );
-
-  console.log(
-    `Chat model: ${GROQ_MODEL}`
-  );
+  console.log("Server running on port " + PORT);
+  console.log("Chat model: " + GROQ_MODEL);
 });
