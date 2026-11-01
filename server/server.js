@@ -612,11 +612,9 @@ app.use((error,req,res,next) => {
 // START SERVER
 // ======================================
 
-app.listen(PORT,() => {
-  console.log(
-    `Intelligent Elevator AI Backend running on port ${PORT}`
-  );
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 
-  console.log(`AI configured: ${Boolean(GROQ_API_KEY)}`);
-  console.log(`Email configured: ${Boolean(transporter)}`);
+  console.log(`Vision model: ${GROQ_VISION_MODEL}`);
+  console.log(`Chat model: ${GROQ_MODEL}`);
 });
