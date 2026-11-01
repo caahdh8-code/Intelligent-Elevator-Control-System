@@ -4,47 +4,207 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Intelligent Elevator Control System</title>
+
 <style>
 *{box-sizing:border-box}
+
 body{
   margin:0;padding:24px 14px;min-height:100vh;
   font-family:Arial,sans-serif;color:#f4fbff;
   background:linear-gradient(145deg,#06172e,#07517b,#031126);
 }
+
 main{max-width:800px;margin:auto}
+
 header{text-align:center;margin:20px 0 30px}
+
 h1{color:#20dcff;font-size:clamp(27px,5vw,40px)}
+
 .panel{
-  background:rgba(15,62,103,.8);border:1px solid #20cfff;
-  border-radius:18px;padding:24px;margin-bottom:20px;
+  background:rgba(15,62,103,.8);
+  border:1px solid #20cfff;
+  border-radius:18px;
+  padding:24px;
+  margin-bottom:20px;
 }
+
 h2{color:#20dcff}
+
 .small{color:#c4dced;line-height:1.5}
+
 #connection{color:#ffcc66}
+
 .page{display:none}
 .page.active{display:block}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
-button{
-  min-height:85px;padding:12px 5px;border-radius:13px;
-  border:2px solid #20cfff;color:white;
-  background:#075d9e;font-size:16px;font-weight:bold;cursor:pointer;
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:22px
 }
+
+button{
+  min-height:85px;
+  padding:12px 5px;
+  border-radius:13px;
+  border:2px solid #20cfff;
+  color:white;
+  background:#075d9e;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
 button:hover{background:#087dbb}
 button:disabled{opacity:.5;cursor:not-allowed}
+
 .floor{display:block;font-size:20px;margin-bottom:6px}
+
 .actions{text-align:center;margin-top:20px}
+
 .back{min-height:48px;min-width:140px;background:#34516c}
-.selection{padding:14px;background:#092b4b;border-radius:12px;margin:15px 0}
+
+.selection{
+  padding:14px;
+  background:#092b4b;
+  border-radius:12px;
+  margin:15px 0;
+}
+
 .selection strong{color:#20dcff}
+
 .result{text-align:center;padding:25px 10px}
+
 #resultTitle{color:#20dcff}
 #resultText{color:#d0e8f5;line-height:1.6}
 #requestStatus{color:#25e6bd;font-weight:bold}
-@media(max-width:420px){.grid{gap:7px}button{font-size:13px}}
+
+@media(max-width:420px){
+  .grid{gap:7px}
+  button{font-size:13px}
+}
+
+/* =================================
+   AI ASSISTANT DESIGN
+================================= */
+
+.ai-float{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  z-index:1000;
+  min-height:55px;
+  padding:12px 20px;
+  border-radius:30px;
+  background:#20cfff;
+  color:#031126;
+  border:0;
+  font-weight:bold;
+  box-shadow:0 4px 18px rgba(0,0,0,.3);
+}
+
+.ai-window{
+  display:none;
+  position:fixed;
+  z-index:1001;
+  right:15px;
+  bottom:85px;
+  width:min(370px,calc(100vw - 30px));
+  height:480px;
+  background:#092b4b;
+  border:1px solid #20cfff;
+  border-radius:18px;
+  overflow:hidden;
+}
+
+.ai-window.open{
+  display:flex;
+  flex-direction:column;
+}
+
+.ai-header{
+  padding:15px;
+  background:#075d9e;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:white;
+}
+
+.ai-close{
+  min-height:35px;
+  min-width:35px;
+  padding:5px;
+}
+
+.ai-messages{
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+  color:white;
+}
+
+.ai-message{
+  padding:10px 13px;
+  margin:8px 0;
+  border-radius:12px;
+  line-height:1.5;
+  max-width:90%;
+  overflow-wrap:anywhere;
+  font-size:14px;
+}
+
+.ai-user{
+  background:#075d9e;
+  margin-left:auto;
+}
+
+.ai-bot{background:#174466}
+
+.ai-input-area{
+  display:flex;
+  gap:7px;
+  padding:10px;
+  border-top:1px solid #20cfff;
+}
+
+.ai-input-area input{
+  flex:1;
+  min-width:0;
+  border-radius:9px;
+  border:1px solid #20cfff;
+  padding:12px;
+}
+
+.ai-input-area button{
+  min-height:45px;
+  min-width:65px;
+  padding:8px;
+  background:#087dbb;
+}
+
+.ai-confirm{
+  width:100%;
+  min-height:45px;
+  margin-top:10px;
+  background:#087e70;
+}
+
+.ai-cancel{
+  width:100%;
+  min-height:40px;
+  margin-top:6px;
+  background:#34516c;
+}
+
 </style>
 </head>
+
 <body>
+
 <main>
+
 <header>
 <h1>INTELLIGENT ELEVATOR</h1>
 <p>Contactless Elevator Control System</p>
@@ -57,181 +217,762 @@ button:disabled{opacity:.5;cursor:not-allowed}
 </section>
 
 <!-- PAGE 1 -->
+
 <section class="panel page active" id="page1">
+
 <h2>SELECT CURRENT FLOOR</h2>
+
 <p class="small">Please select your current floor.</p>
+
 <div class="grid">
-<button onclick="selectCurrent(1)"><span class="floor">1</span>FLOOR 1</button>
-<button onclick="selectCurrent(2)"><span class="floor">2</span>FLOOR 2</button>
-<button onclick="selectCurrent(3)"><span class="floor">3</span>FLOOR 3</button>
+
+<button onclick="selectCurrent(1)">
+<span class="floor">1</span>FLOOR 1
+</button>
+
+<button onclick="selectCurrent(2)">
+<span class="floor">2</span>FLOOR 2
+</button>
+
+<button onclick="selectCurrent(3)">
+<span class="floor">3</span>FLOOR 3
+</button>
+
 </div>
+
 </section>
 
+
 <!-- PAGE 2 -->
+
 <section class="panel page" id="page2">
+
 <h2>SELECT DESTINATION FLOOR</h2>
+
 <div class="selection">
 Current Floor: <strong id="currentSelected"></strong>
 </div>
+
 <p class="small">Please select your destination floor.</p>
+
 <div class="grid">
+
 <button onclick="selectDestination(1)">FLOOR 1</button>
 <button onclick="selectDestination(2)">FLOOR 2</button>
 <button onclick="selectDestination(3)">FLOOR 3</button>
+
 </div>
+
 <div class="actions">
 <button class="back" onclick="showPage(1)">BACK</button>
 </div>
+
 </section>
+
 
 <!-- PAGE 3 -->
+
 <section class="panel page result" id="page3">
+
 <h2 id="resultTitle">Please wait for your lift.</h2>
+
 <p id="resultText"></p>
+
 <div class="selection">
+
 <p>Current Floor: <strong id="resultCurrent"></strong></p>
+
 <p>Destination Floor: <strong id="resultDestination"></strong></p>
+
 <p>Request Status: <strong id="requestStatus">WAITING</strong></p>
+
 </div>
+
 <p class="small" id="resultMessage"></p>
+
 <button onclick="newRequest()">NEW REQUEST</button>
+
 </section>
+
 </main>
 
+
+<!-- =================================
+     AI ASSISTANT CHAT WINDOW
+================================= -->
+
+<button class="ai-float" onclick="toggleAI()">
+✦ AI Assistant
+</button>
+
+<div class="ai-window" id="aiWindow">
+
+  <div class="ai-header">
+
+    <strong>✦ Elevator AI Assistant</strong>
+
+    <button class="ai-close" onclick="toggleAI()">✕</button>
+
+  </div>
+
+  <div class="ai-messages" id="aiMessages">
+
+    <div class="ai-message ai-bot">
+      Hello! Welcome to Intelligent Elevator.
+
+      <br><br>
+
+      Hai! Saya pembantu AI anda. Saya boleh membantu
+      mencari lokasi fasiliti dan memilih tingkat destinasi.
+
+      <br><br>
+
+      You can ask me in English or Bahasa Melayu.
+    </div>
+
+  </div>
+
+  <div class="ai-input-area">
+
+    <input
+      id="aiInput"
+      type="text"
+      placeholder="Ask me anything..."
+      autocomplete="off"
+    >
+
+    <button id="aiSendButton" onclick="sendAIMessage()">
+      SEND
+    </button>
+
+  </div>
+
+</div>
+
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+
 <script>
+
+// =========================================
+// FIREBASE CONFIGURATION
+// =========================================
+
 const firebaseConfig = {
+
   databaseURL:
   "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app"
+
 };
 
 let db;
+
 let currentFloor = 0;
+
 let sending = false;
+
 let activeRequestRef = null;
 
+
+// =========================================
+// PAGE NAVIGATION
+// =========================================
+
 function showPage(page){
+
   [1,2,3].forEach(n=>{
-    document.getElementById("page"+n).classList.toggle("active",n===page);
+
+    document.getElementById("page"+n)
+      .classList.toggle("active",n===page);
+
   });
+
   window.scrollTo(0,0);
+
 }
+
+
+// =========================================
+// CURRENT FLOOR
+// =========================================
 
 function selectCurrent(floor){
+
   currentFloor = floor;
-  document.getElementById("currentSelected").textContent="FLOOR "+floor;
+
+  document.getElementById("currentSelected").textContent =
+    "FLOOR "+floor;
+
   showPage(2);
+
 }
 
+
+// =========================================
+// DESTINATION FLOOR
+// =========================================
+
 function selectDestination(floor){
+
   if(sending) return;
 
   if(floor===currentFloor){
-    document.getElementById("resultTitle").textContent=
+
+    document.getElementById("resultTitle").textContent =
       "You are already here!";
-    document.getElementById("resultText").textContent=
+
+    document.getElementById("resultText").textContent =
       "Your current floor and destination floor are the same.";
-    document.getElementById("resultCurrent").textContent="FLOOR "+currentFloor;
-    document.getElementById("resultDestination").textContent="FLOOR "+floor;
-    document.getElementById("requestStatus").textContent="NOT SUBMITTED";
+
+    document.getElementById("resultCurrent").textContent =
+      "FLOOR "+currentFloor;
+
+    document.getElementById("resultDestination").textContent =
+      "FLOOR "+floor;
+
+    document.getElementById("requestStatus").textContent =
+      "NOT SUBMITTED";
+
     document.getElementById("resultMessage").textContent="";
+
     showPage(3);
+
     return;
+
   }
 
   submitRequest(floor);
+
 }
 
+
+// =========================================
+// SUBMIT REQUEST TO FIREBASE
+// =========================================
+
 async function submitRequest(destinationFloor){
+
   if(!db){
+
     alert("Firebase is not connected.");
-    return;
+
+    return false;
+
   }
 
+  if(sending) return false;
+
   sending=true;
-  document.getElementById("resultTitle").textContent="Please wait for your lift.";
-  document.getElementById("resultText").textContent=
+
+  document.getElementById("resultTitle").textContent =
+    "Please wait for your lift.";
+
+  document.getElementById("resultText").textContent =
     "Your elevator request is being submitted.";
-  document.getElementById("resultCurrent").textContent="FLOOR "+currentFloor;
-  document.getElementById("resultDestination").textContent="FLOOR "+destinationFloor;
-  document.getElementById("requestStatus").textContent="SUBMITTING";
+
+  document.getElementById("resultCurrent").textContent =
+    "FLOOR "+currentFloor;
+
+  document.getElementById("resultDestination").textContent =
+    "FLOOR "+destinationFloor;
+
+  document.getElementById("requestStatus").textContent =
+    "SUBMITTING";
+
   document.getElementById("resultMessage").textContent="";
+
   showPage(3);
 
   try{
-    activeRequestRef=db.ref("Elevator/Queue").push();
+
+    activeRequestRef = db.ref("Elevator/Queue").push();
 
     await activeRequestRef.set({
+
       currentFloor:currentFloor,
+
       destinationFloor:destinationFloor,
+
       status:"WAITING",
+
       createdAt:firebase.database.ServerValue.TIMESTAMP
+
     });
 
-    document.getElementById("requestStatus").textContent="WAITING";
-    document.getElementById("resultMessage").textContent=
+    document.getElementById("requestStatus").textContent =
+      "WAITING";
+
+    document.getElementById("resultMessage").textContent =
       "Request submitted successfully. Please wait for the elevator.";
 
     activeRequestRef.child("status").on("value",snapshot=>{
-      const status=snapshot.val() || "WAITING";
-      document.getElementById("requestStatus").textContent=status;
+
+      const status = snapshot.val() || "WAITING";
+
+      document.getElementById("requestStatus").textContent =
+        status;
 
       if(status==="PROCESSING"){
-        document.getElementById("resultTitle").textContent="Your lift is on the way.";
-        document.getElementById("resultMessage").textContent=
+
+        document.getElementById("resultTitle").textContent =
+          "Your lift is on the way.";
+
+        document.getElementById("resultMessage").textContent =
           "Your request is currently being processed.";
+
       }
 
       if(status==="COMPLETED"){
-        document.getElementById("resultTitle").textContent="Request completed!";
-        document.getElementById("resultMessage").textContent=
+
+        document.getElementById("resultTitle").textContent =
+          "Request completed!";
+
+        document.getElementById("resultMessage").textContent =
           "The elevator sequence has finished.";
+
       }
 
       if(status==="ERROR"){
-        document.getElementById("resultTitle").textContent="Request error";
-        document.getElementById("resultMessage").textContent=
+
+        document.getElementById("resultTitle").textContent =
+          "Request error";
+
+        document.getElementById("resultMessage").textContent =
           "Please contact the system operator.";
+
       }
+
     });
 
+    return true;
+
   }catch(error){
+
     console.error(error);
-    document.getElementById("resultTitle").textContent="Request failed";
-    document.getElementById("resultMessage").textContent=error.message;
+
+    document.getElementById("resultTitle").textContent =
+      "Request failed";
+
+    document.getElementById("requestStatus").textContent =
+      "ERROR";
+
+    document.getElementById("resultMessage").textContent =
+      error.message;
+
+    return false;
+
   }finally{
+
     sending=false;
+
   }
+
 }
+
+
+// =========================================
+// NEW REQUEST
+// =========================================
 
 function newRequest(){
+
   if(activeRequestRef){
+
     activeRequestRef.child("status").off();
+
     activeRequestRef=null;
+
   }
+
   currentFloor=0;
+
   showPage(1);
+
 }
 
-window.addEventListener("load",()=>{
+
+// =========================================
+// AI ASSISTANT
+// =========================================
+
+// Replace this URL after deploying your AI backend.
+
+const AI_API_URL =
+"https://YOUR-AI-BACKEND.onrender.com/api/assistant";
+
+let aiHistory = [];
+
+let aiPendingFloor = null;
+
+let aiBusy = false;
+
+
+// OPEN / CLOSE AI CHAT
+
+function toggleAI(){
+
+  const chat = document.getElementById("aiWindow");
+
+  chat.classList.toggle("open");
+
+  if(chat.classList.contains("open")){
+
+    document.getElementById("aiInput").focus();
+
+  }
+
+}
+
+
+// DISPLAY AI MESSAGE
+
+function addAIMessage(message,type){
+
+  const messages = document.getElementById("aiMessages");
+
+  const div = document.createElement("div");
+
+  div.className = "ai-message "+type;
+
+  div.textContent = message;
+
+  messages.appendChild(div);
+
+  messages.scrollTop = messages.scrollHeight;
+
+  return div;
+
+}
+
+
+// SEND MESSAGE TO AI BACKEND
+
+async function sendAIMessage(){
+
+  if(aiBusy) return;
+
+  const input = document.getElementById("aiInput");
+
+  const message = input.value.trim();
+
+  if(!message) return;
+
+  input.value="";
+
+  addAIMessage(message,"ai-user");
+
+  aiBusy=true;
+
+  document.getElementById("aiSendButton").disabled=true;
+
+  const loading = addAIMessage(
+    "Thinking... / Sedang berfikir...",
+    "ai-bot"
+  );
+
   try{
+
+    const response = await fetch(AI_API_URL,{
+
+      method:"POST",
+
+      headers:{
+
+        "Content-Type":"application/json"
+
+      },
+
+      body:JSON.stringify({
+
+        message:message,
+
+        currentFloor:currentFloor,
+
+        history:aiHistory
+
+      })
+
+    });
+
+    if(!response.ok){
+
+      throw new Error("AI service unavailable.");
+
+    }
+
+    const data = await response.json();
+
+    if(typeof data.reply !== "string"){
+
+      throw new Error("Invalid AI response.");
+
+    }
+
+    loading.remove();
+
+    addAIMessage(data.reply,"ai-bot");
+
+    aiHistory.push(
+
+      {role:"user",content:message},
+
+      {role:"assistant",content:data.reply}
+
+    );
+
+    aiHistory=aiHistory.slice(-12);
+
+    if(
+
+      Number.isInteger(data.destinationFloor) &&
+
+      data.destinationFloor>=1 &&
+
+      data.destinationFloor<=3
+
+    ){
+
+      aiPendingFloor=data.destinationFloor;
+
+      showAIConfirmation(data.destinationFloor);
+
+    }
+
+  }catch(error){
+
+    console.error(error);
+
+    loading.remove();
+
+    addAIMessage(
+
+      "AI connection failed. Please try again later.",
+
+      "ai-bot"
+
+    );
+
+  }finally{
+
+    aiBusy=false;
+
+    document.getElementById("aiSendButton").disabled=false;
+
+  }
+
+}
+
+
+// AI DESTINATION CONFIRMATION
+
+function showAIConfirmation(floor){
+
+  const messages = document.getElementById("aiMessages");
+
+  const box = document.createElement("div");
+
+  box.className="ai-message ai-bot";
+
+  const text=document.createElement("div");
+
+  text.textContent=
+    "Do you confirm that you want to go to Floor "+floor+"?";
+
+  const confirm=document.createElement("button");
+
+  confirm.className="ai-confirm";
+
+  confirm.textContent="CONFIRM";
+
+  confirm.onclick=async function(){
+
+    if(aiPendingFloor!==floor) return;
+
+    aiPendingFloor=null;
+
+    confirm.disabled=true;
+
+    cancel.disabled=true;
+
+    const success=await confirmAIRequest(floor);
+
+    if(success){
+
+      box.remove();
+
+    }else{
+
+      confirm.disabled=false;
+
+      cancel.disabled=false;
+
+    }
+
+  };
+
+  const cancel=document.createElement("button");
+
+  cancel.className="ai-cancel";
+
+  cancel.textContent="CANCEL";
+
+  cancel.onclick=function(){
+
+    aiPendingFloor=null;
+
+    box.remove();
+
+    addAIMessage(
+
+      "Request cancelled. / Permintaan dibatalkan.",
+
+      "ai-bot"
+
+    );
+
+  };
+
+  box.appendChild(text);
+
+  box.appendChild(confirm);
+
+  box.appendChild(cancel);
+
+  messages.appendChild(box);
+
+  messages.scrollTop=messages.scrollHeight;
+
+}
+
+
+// SUBMIT AI CONFIRMED REQUEST
+
+async function confirmAIRequest(floor){
+
+  if(!currentFloor){
+
+    addAIMessage(
+
+      "Please select your current floor first.",
+
+      "ai-bot"
+
+    );
+
+    return false;
+
+  }
+
+  if(floor===currentFloor){
+
+    addAIMessage(
+
+      "You are already on this floor.",
+
+      "ai-bot"
+
+    );
+
+    return false;
+
+  }
+
+  if(sending){
+
+    addAIMessage(
+
+      "Please wait for your current request.",
+
+      "ai-bot"
+
+    );
+
+    return false;
+
+  }
+
+  const success=await submitRequest(floor);
+
+  if(success){
+
+    addAIMessage(
+
+      "Your elevator request has been submitted successfully.",
+
+      "ai-bot"
+
+    );
+
+    document.getElementById("aiWindow").classList.remove("open");
+
+  }
+
+  return success;
+
+}
+
+
+// ENTER KEY TO SEND MESSAGE
+
+document.getElementById("aiInput").addEventListener(
+
+  "keydown",
+
+  function(event){
+
+    if(event.key==="Enter"){
+
+      event.preventDefault();
+
+      sendAIMessage();
+
+    }
+
+  }
+
+);
+
+
+// =========================================
+// INITIALIZE FIREBASE
+// =========================================
+
+window.addEventListener("load",()=>{
+
+  try{
+
     firebase.initializeApp(firebaseConfig);
+
     db=firebase.database();
 
     db.ref(".info/connected").on("value",snapshot=>{
+
       const connected=snapshot.val()===true;
+
       document.getElementById("connection").textContent=
+
         connected?"CONNECTED":"DISCONNECTED";
+
       document.getElementById("connection").style.color=
+
         connected?"#25e6bd":"#ff6677";
+
     });
+
   }catch(error){
+
     document.getElementById("connection").textContent="ERROR";
+
     console.error(error);
+
   }
+
 });
+
 </script>
+
 </body>
 </html>
