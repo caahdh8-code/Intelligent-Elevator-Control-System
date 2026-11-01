@@ -56,6 +56,7 @@ header p {font-size:clamp(13px,2vw,21px);font-weight:bold;margin:0}
 .result {
   margin-top:25px;padding:18px;border-radius:13px;
   background:#082e48;line-height:1.7;border:1px solid var(--cyan);
+  white-space:pre-wrap;
 }
 .result.success {border-color:var(--green)}
 .result.error {border-color:var(--red)}
@@ -105,15 +106,15 @@ header p {font-size:clamp(13px,2vw,21px);font-weight:bold;margin:0}
   font-weight:bold;color:white;background:#079bd3;
 }
 .send-btn:disabled {opacity:.6;cursor:not-allowed}
-.tool-btn {background:#17698e;font-size:15px}
+.tool-btn {background:#17698e;font-size:14px}
 .tool-btn.recording {background:#c52c43}
 .ai-tools {display:flex;gap:8px;margin-top:9px}
 .ai-tools button {flex:1}
-#imagePreview {
-  display:none;max-width:100%;max-height:110px;
-  border-radius:10px;margin:8px 0;
+.voice-language {
+  width:100%;margin-top:9px;padding:9px;border-radius:9px;
+  border:1px solid #47cde1;background:#062f49;color:white;
+  font-size:13px;
 }
-#imageInput {display:none}
 .ai-hint {font-size:11px;color:#b9d6e5;margin:7px 0 0}
 
 @media(max-width:650px) {
@@ -131,6 +132,7 @@ header p {font-size:clamp(13px,2vw,21px);font-weight:bold;margin:0}
 </head>
 
 <body>
+
 <header>
   <h1>INTELLIGENT ELEVATOR</h1>
   <p>SMART CONTACTLESS ELEVATOR CONTROL</p>
@@ -140,6 +142,7 @@ header p {font-size:clamp(13px,2vw,21px);font-weight:bold;margin:0}
   <section class="panel" id="currentPage">
     <h2>SELECT CURRENT FLOOR</h2>
     <p class="subtitle">Please select your current location.</p>
+
     <div class="floor-grid">
       <button class="floor-btn" onclick="selectCurrent(1)">1 <span>FLOOR 1</span></button>
       <button class="floor-btn" onclick="selectCurrent(2)">2 <span>FLOOR 2</span></button>
@@ -152,11 +155,13 @@ header p {font-size:clamp(13px,2vw,21px);font-weight:bold;margin:0}
     <p class="subtitle">Your current location:</p>
     <div class="current-label" id="currentDisplay">FLOOR 1</div>
     <p class="subtitle">Please select your destination.</p>
+
     <div class="floor-grid" id="destinationButtons">
       <button class="floor-btn" onclick="selectDestination(1)">1 <span>FLOOR 1</span></button>
       <button class="floor-btn" onclick="selectDestination(2)">2 <span>FLOOR 2</span></button>
       <button class="floor-btn" onclick="selectDestination(3)">3 <span>FLOOR 3</span></button>
     </div>
+
     <div id="liftResult" class="result hidden"></div>
     <button class="action-btn" onclick="backToCurrent()">← BACK</button>
   </section>
@@ -179,10 +184,11 @@ Examples:
 • Where is the cafe?
 • Gym kat mana?
 • Where are the guest rooms?
+• Swimming pool dekat tingkat berapa?
 • Please send the lift to Floor 3.
-• I want to report a lost item.
+• Saya nak pergi ke restoran.
 
-You can also send a picture or use voice input.</div>
+You can type your question or use voice input.</div>
   </div>
 
   <div class="ai-input-area">
@@ -193,16 +199,19 @@ You can also send a picture or use voice input.</div>
       <button class="send-btn" id="sendButton" onclick="sendMessage()">SEND</button>
     </div>
 
-    <img id="imagePreview" alt="Selected image preview">
+    <select class="voice-language" id="voiceLanguage">
+      <option value="ms-MY">Voice Language: Bahasa Melayu</option>
+      <option value="en-US">Voice Language: English</option>
+    </select>
 
     <div class="ai-tools">
-      <button class="tool-btn" onclick="document.getElementById('imageInput').click()">📷 Photo</button>
-      <input type="file" id="imageInput" accept="image/*"
-        capture="environment" onchange="selectImage(event)">
-      <button class="tool-btn" id="voiceButton" onclick="startVoice()">🎤 Voice</button>
-      <button class="tool-btn" onclick="stopVoice()">■ Stop</button>
+      <button class="tool-btn" id="voiceButton" onclick="startVoice()">🎤 START VOICE</button>
+      <button class="tool-btn" onclick="stopVoice()">■ STOP</button>
     </div>
-    <p class="ai-hint" id="voiceStatus">AI Assistant supports English and Bahasa Melayu.</p>
+
+    <p class="ai-hint" id="voiceStatus">
+      Select your voice language and press START VOICE.
+    </p>
   </div>
 </div>
 
@@ -210,46 +219,50 @@ You can also send a picture or use voice input.</div>
 // ======================================
 // CONFIGURATION
 // ======================================
+
 const FIREBASE_DB_URL =
   "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app";
+
 const QUEUE_PATH = "Elevator/Queue";
+
 const AI_API_URL =
   "https://intelligent-elevator-control-system-1.onrender.com/api/assistant";
-const REPORT_API_URL =
-  "https://intelligent-elevator-control-system-1.onrender.com/api/report";
 
 let currentFloor = null;
 let destinationFloor = null;
-let selectedImage = null;
 let recognition = null;
 let chatHistory = [];
 let pendingLiftRequest = null;
-
-// New: hold report details and photo until the guest confirms.
-let pendingReport = null;
-let pendingReportImage = null;
 let isSendingMessage = false;
+let isListening = false;
 
 // ======================================
 // CURRENT FLOOR
 // ======================================
+
 function selectCurrent(floor) {
   currentFloor = Number(floor);
+
   document.getElementById("currentPage").classList.add("hidden");
   document.getElementById("destinationPage").classList.remove("hidden");
-  document.getElementById("currentDisplay").textContent = "FLOOR " + currentFloor;
+
+  document.getElementById("currentDisplay").textContent =
+    "FLOOR " + currentFloor;
 
   const result = document.getElementById("liftResult");
   result.classList.add("hidden");
   result.textContent = "";
+
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
 // ======================================
 // DESTINATION FLOOR
 // ======================================
+
 async function selectDestination(floor) {
   destinationFloor = Number(floor);
+
   const result = document.getElementById("liftResult");
   result.classList.remove("hidden");
 
@@ -264,12 +277,14 @@ async function selectDestination(floor) {
 
   try {
     const queueId = await sendLiftRequest(currentFloor,destinationFloor);
+
     result.className = "result success";
     result.textContent =
       "REQUEST SUBMITTED!\n\n" +
       "Current Floor: " + currentFloor + "\n" +
       "Destination Floor: " + destinationFloor + "\n\n" +
       "Please wait for the lift.\nRequest ID: " + queueId;
+
   } catch(error) {
     console.error(error);
     result.className = "result error";
@@ -280,6 +295,7 @@ async function selectDestination(floor) {
 // ======================================
 // FIREBASE QUEUE
 // ======================================
+
 async function sendLiftRequest(current,destination) {
   current = Number(current);
   destination = Number(destination);
@@ -287,7 +303,10 @@ async function sendLiftRequest(current,destination) {
   if (![1,2,3].includes(current) || ![1,2,3].includes(destination)) {
     throw new Error("Invalid floor selection.");
   }
-  if (current === destination) throw new Error("You are already here!");
+
+  if (current === destination) {
+    throw new Error("You are already here!");
+  }
 
   const request = {
     currentFloor: current,
@@ -296,33 +315,46 @@ async function sendLiftRequest(current,destination) {
     createdAt: Date.now()
   };
 
-  const response = await fetch(`${FIREBASE_DB_URL}/${QUEUE_PATH}.json`, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(request)
-  });
+  const response = await fetch(
+    `${FIREBASE_DB_URL}/${QUEUE_PATH}.json`,
+    {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(request)
+    }
+  );
 
-  if (!response.ok) throw new Error("Firebase queue error: " + response.status);
+  if (!response.ok) {
+    throw new Error("Firebase queue error: " + response.status);
+  }
 
   const data = await response.json();
-  if (!data || !data.name) throw new Error("Firebase did not return a queue ID.");
+
+  if (!data || !data.name) {
+    throw new Error("Firebase did not return a queue ID.");
+  }
+
   return data.name;
 }
 
 // ======================================
 // BACK BUTTON
 // ======================================
+
 function backToCurrent() {
   currentFloor = null;
   destinationFloor = null;
+
   document.getElementById("destinationPage").classList.add("hidden");
   document.getElementById("currentPage").classList.remove("hidden");
+
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
 // ======================================
 // AI WINDOW AND CHAT
 // ======================================
+
 function toggleAI() {
   document.getElementById("aiWindow").classList.toggle("hidden");
 }
@@ -330,15 +362,21 @@ function toggleAI() {
 function addMessage(message,sender) {
   const box = document.getElementById("chatBox");
   const div = document.createElement("div");
-  div.className = sender === "user" ? "message user-message" : "message ai-message";
+
+  div.className =
+    sender === "user"
+      ? "message user-message"
+      : "message ai-message";
+
   div.textContent = message;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 
 // ======================================
-// CONFIRMATION HELPERS
+// TEXT HELPERS
 // ======================================
+
 function normaliseText(text) {
   return String(text || "").toLowerCase().trim()
     .replace(/[.,!?;:]+/g," ")
@@ -352,65 +390,66 @@ function isConfirmation(text) {
     "yes","yeah","yep","y","ya","ye","betul","benar",
     "sah","sahkan","setuju","saya setuju","saya sahkan",
     "okay","ok","confirm","confirmed","i confirm",
-    "i agree","i approve","approved","agreed"
+    "i agree","i approve","approved","agreed",
+    "boleh","teruskan","hantar"
   ];
 
-  if (exactYes.includes(t)) return true;
-
-  const patterns = [
-    /\b(saya|aku|kami)\s+(sahkan|setuju|bersetuju)\b/,
-    /\b(sila|tolong)\s+(hantar|teruskan)\b/,
-    /\b(hantar|teruskan)\s+(laporan|report)\b/,
-    /\bmaklumat(\s+ini)?\s+(betul|tepat)\b/,
-    /\bsemua\s+(maklumat|butiran)\s+(ini\s+)?(betul|tepat)\b/,
-    /\btiada\s+(pembetulan|perubahan)\b/,
-    /\bplease\s+(submit|send|proceed)\b/,
-    /\b(go ahead|send the report|submit the report)\b/,
-    /\beverything is (correct|right)\b/,
-    /\bthe details are (correct|right)\b/,
-    /\bthat's correct\b/
-  ];
-
-  return patterns.some(pattern => pattern.test(t));
+  return exactYes.includes(t);
 }
 
 function isRejection(text) {
   const t = normaliseText(text);
+
   const exactNo = [
-    "no","nope","n","cancel","cancel it","do not submit",
-    "don't submit","tak","tidak","batal","jangan",
+    "no","nope","n","cancel","cancel it",
+    "do not proceed","don't proceed",
+    "tak","tidak","batal","jangan",
     "jangan hantar","tak setuju","tidak setuju"
   ];
+
   return exactNo.includes(t);
 }
 
 // ======================================
-// LIFT COMMAND DETECTION
+// DIRECT LIFT COMMAND
 // ======================================
+
 function detectDirectLiftCommand(text) {
   const t = String(text || "").toLowerCase();
 
   const hasRequest =
     /\b(send|call|request|bring|take me|i want to go|go to|please take)\b/.test(t) ||
-    /\b(panggil|hantar|nak pergi|bawa saya|saya nak pergi)\b/.test(t);
+    /\b(panggil|hantar|nak pergi|bawa saya|saya nak pergi|saya mahu pergi)\b/.test(t);
 
   if (!hasRequest) return null;
 
-  const match = t.match(/\b(?:floor|level|tingkat)\s*(?:number\s*)?([123])\b/);
+  const match = t.match(
+    /\b(?:floor|level|tingkat)\s*(?:number\s*)?([123])\b/
+  );
+
   return match ? Number(match[1]) : null;
 }
 
+// ======================================
+// SUBMIT AI LIFT REQUEST
+// ======================================
+
 async function submitAILiftRequest(floor) {
   if (!currentFloor) {
-    addMessage("Please select your current floor on the website first.","ai");
+    addMessage(
+      "Please select your current floor on the website first.",
+      "ai"
+    );
     return;
   }
 
   floor = Number(floor);
+
   if (![1,2,3].includes(floor)) {
     addMessage("Please select a valid floor.","ai");
     return;
   }
+
   if (floor === currentFloor) {
     addMessage("You are already here!","ai");
     return;
@@ -418,6 +457,7 @@ async function submitAILiftRequest(floor) {
 
   try {
     const queueId = await sendLiftRequest(currentFloor,floor);
+
     addMessage(
       "Your elevator request has been submitted!\n\n" +
       "Current Floor: " + currentFloor + "\n" +
@@ -425,99 +465,11 @@ async function submitAILiftRequest(floor) {
       "Please wait for the lift.\nRequest ID: " + queueId,
       "ai"
     );
+
   } catch(error) {
     console.error(error);
-    addMessage("I could not send the elevator request. Please try again.","ai");
-  }
-}
-
-// ======================================
-// IMAGE CONVERSION
-// ======================================
-function fileToBase64(file) {
-  return new Promise((resolve,reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("Unable to read the selected image."));
-    reader.readAsDataURL(file);
-  });
-}
-
-function selectImage(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    alert("Please select an image.");
-    event.target.value = "";
-    return;
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    alert("Maximum image size is 5 MB.");
-    event.target.value = "";
-    return;
-  }
-
-  selectedImage = file;
-  const preview = document.getElementById("imagePreview");
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = "block";
-  document.getElementById("voiceStatus").textContent =
-    "Image attached. Type your question and press SEND.";
-}
-
-// ======================================
-// REPORT SUBMISSION
-// ======================================
-async function submitReport(report,image) {
-  const response = await fetch(REPORT_API_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      type:report.type,
-      incidentFloor:Number(report.incidentFloor),
-      location:report.location,
-      description:report.description || "",
-      image:image || null
-    })
-  });
-
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    throw new Error("The report server returned an invalid response.");
-  }
-
-  if (!response.ok) {
-    throw new Error(data.error || "Report submission failed.");
-  }
-
-  return "Report ID: " + (data.reportId || "Not available") +
-    "\nYour report has been submitted to the hotel.";
-}
-
-async function confirmAndSubmitReport() {
-  if (!pendingReport) return;
-
-  const reportToSend = {...pendingReport};
-  const imageToSend = pendingReportImage;
-
-  addMessage("Thank you. I am submitting your report to the hotel now.","ai");
-
-  try {
-    const result = await submitReport(reportToSend,imageToSend);
-    pendingReport = null;
-    pendingReportImage = null;
-    addMessage("Your report was submitted successfully.\n\n" + result,"ai");
-  } catch(error) {
-    console.error("Report submission error:",error);
-    // Keep pending report and photo so the guest can retry.
     addMessage(
-      "Sorry, I could not submit your report.\n\n" +
-      error.message +
-      "\n\nYour report details are still available. Please reply YES to try again, or NO to cancel.",
+      "I could not send the elevator request. Please try again.",
       "ai"
     );
   }
@@ -526,54 +478,23 @@ async function confirmAndSubmitReport() {
 // ======================================
 // SEND MESSAGE TO AI
 // ======================================
+
 async function sendMessage() {
   if (isSendingMessage) return;
 
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
-  if (!text && !selectedImage) return;
+
+  if (!text) return;
 
   input.value = "";
-  addMessage(text || "Please analyse this uploaded image.","user");
-
-  const imageFile = selectedImage;
-  selectedImage = null;
-
-  document.getElementById("imagePreview").style.display = "none";
-  document.getElementById("imagePreview").src = "";
-  document.getElementById("imageInput").value = "";
-
-  // Convert and retain an uploaded image for a possible report.
-  let imageData = null;
-  if (imageFile) {
-    try {
-      imageData = await fileToBase64(imageFile);
-      pendingReportImage = imageData;
-    } catch(error) {
-      console.error(error);
-      addMessage("I could not read that image. Please try uploading it again.","ai");
-      return;
-    }
-  }
-
-  // Handle report confirmation in the website.
-  // Do not send the confirmation message to the AI again.
-  if (pendingReport && isConfirmation(text)) {
-    await confirmAndSubmitReport();
-    return;
-  }
-
-  if (pendingReport && isRejection(text)) {
-    pendingReport = null;
-    pendingReportImage = null;
-    addMessage("Okay. Your report has been cancelled and was not sent to the hotel.","ai");
-    return;
-  }
+  addMessage(text,"user");
 
   // Handle lift confirmation.
   if (pendingLiftRequest && isConfirmation(text)) {
     const floor = pendingLiftRequest.destinationFloor;
     pendingLiftRequest = null;
+
     await submitAILiftRequest(floor);
     return;
   }
@@ -584,11 +505,15 @@ async function sendMessage() {
     return;
   }
 
-  // Direct lift command.
+  // Direct command for a numbered floor.
   const directFloor = detectDirectLiftCommand(text);
+
   if (directFloor !== null) {
     if (!currentFloor) {
-      addMessage("Please select your current floor on the website first.","ai");
+      addMessage(
+        "Please select your current floor on the website first.",
+        "ai"
+      );
       return;
     }
 
@@ -598,18 +523,21 @@ async function sendMessage() {
     }
 
     pendingLiftRequest = {destinationFloor:directFloor};
+
     addMessage(
       "You are currently on Floor " + currentFloor +
       ". Do you want me to send the lift to Floor " + directFloor +
-      "? Please reply YES to confirm or NO to cancel.",
+      "?\n\nPlease reply YES to confirm or NO to cancel.",
       "ai"
     );
+
     return;
   }
 
   const thinking = document.createElement("div");
   thinking.className = "message ai-message";
   thinking.textContent = "AI is thinking...";
+
   const chatBox = document.getElementById("chatBox");
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -622,39 +550,47 @@ async function sendMessage() {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        message:text || "Please analyse the uploaded image.",
+        message:text,
         currentFloor:currentFloor,
-        history:chatHistory,
-        image:imageData
+        history:chatHistory
       })
     });
 
     let data;
+
     try {
       data = await response.json();
     } catch {
       throw new Error("The AI server returned an invalid response.");
     }
 
-    if (!response.ok) throw new Error(data.error || "AI server error");
+    if (!response.ok) {
+      throw new Error(data.error || "AI server error");
+    }
 
     thinking.remove();
 
     const reply = data.reply || data.response || data.answer;
-    if (typeof reply !== "string") throw new Error("Invalid AI response.");
 
-    chatHistory.push({role:"user",content:text || "Please analyse the uploaded image."});
+    if (typeof reply !== "string") {
+      throw new Error("Invalid AI response.");
+    }
+
+    chatHistory.push({role:"user",content:text});
     chatHistory.push({role:"assistant",content:reply});
     chatHistory = chatHistory.slice(-10);
 
-    // AI asks the guest to confirm a lift request.
+    // AI asks for lift confirmation.
     if (data.action === "confirm_lift") {
       const floor = Number(data.destinationFloor);
 
       if (![1,2,3].includes(floor) || !currentFloor) {
-        addMessage(!currentFloor
-          ? "Please select your current floor on the website first."
-          : reply,"ai");
+        addMessage(
+          !currentFloor
+            ? "Please select your current floor on the website first."
+            : reply,
+          "ai"
+        );
         return;
       }
 
@@ -668,51 +604,7 @@ async function sendMessage() {
       return;
     }
 
-    // AI has collected report details and asks for confirmation.
-    if (data.action === "confirm_report") {
-      const report = data.report;
-
-      const validTypes = [
-        "Lost Item","Suspicious Person","Facility Damage",
-        "General Complaint","Other"
-      ];
-
-      if (
-        !report ||
-        !validTypes.includes(report.type) ||
-        ![1,2,3].includes(Number(report.incidentFloor)) ||
-        typeof report.location !== "string" ||
-        !report.location.trim()
-      ) {
-        addMessage(
-          "I still need the report type, incident floor and location before I can prepare the report.",
-          "ai"
-        );
-        return;
-      }
-
-      pendingReport = {
-        type:report.type,
-        incidentFloor:Number(report.incidentFloor),
-        location:report.location.trim(),
-        description:String(report.description || "")
-      };
-
-      addMessage(reply,"ai");
-      return;
-    }
-
-    // Never submit a report based on the old "report" action.
-    // Only the website's pending confirmation handler can submit it.
-    if (data.action === "report") {
-      addMessage(
-        "I have received the report details, but I need to show you the report summary and get your confirmation before sending it.",
-        "ai"
-      );
-      return;
-    }
-
-    // This action is not used to bypass the website's lift confirmation.
+    // AI is not allowed to bypass website confirmation.
     if (data.action === "submit") {
       addMessage(
         "Please confirm the elevator destination first.",
@@ -726,11 +618,13 @@ async function sendMessage() {
   } catch(error) {
     thinking.remove();
     console.error("AI error:",error);
+
     addMessage(
       "Sorry, the AI Assistant is temporarily unavailable. Please try again.\n\n" +
       error.message,
       "ai"
     );
+
   } finally {
     isSendingMessage = false;
     document.getElementById("sendButton").disabled = false;
@@ -740,50 +634,111 @@ async function sendMessage() {
 // ======================================
 // VOICE INPUT
 // ======================================
+
 function startVoice() {
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  const status = document.getElementById("voiceStatus");
+  const voiceButton = document.getElementById("voiceButton");
+  const selectedLanguage =
+    document.getElementById("voiceLanguage").value;
+
   if (!SpeechRecognition) {
-    document.getElementById("voiceStatus").textContent =
-      "Voice recognition is not supported. Please use Chrome.";
+    status.textContent =
+      "Voice recognition is not supported in this browser. Please use a supported browser such as Chrome.";
     return;
   }
 
-  if (recognition) recognition.stop();
+  if (isListening) {
+    status.textContent = "Voice recognition is already active.";
+    return;
+  }
+
+  if (recognition) {
+    recognition.onend = null;
+    recognition.stop();
+  }
 
   recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.continuous = false;
-  recognition.interimResults = false;
 
-  document.getElementById("voiceButton").classList.add("recording");
-  document.getElementById("voiceStatus").textContent = "Listening... Speak now.";
+  recognition.lang = selectedLanguage;
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  isListening = true;
+  voiceButton.classList.add("recording");
+  voiceButton.textContent = "🔴 LISTENING...";
+  status.textContent =
+    selectedLanguage === "ms-MY"
+      ? "Mendengar... Sila bercakap sekarang."
+      : "Listening... Please speak now.";
 
   recognition.onresult = function(event) {
-    const spoken = event.results[0][0].transcript;
-    document.getElementById("chatInput").value = spoken;
-    document.getElementById("voiceStatus").textContent = "Voice captured successfully.";
-    sendMessage();
+    let finalTranscript = "";
+    let interimTranscript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+
+    if (interimTranscript) {
+      status.textContent = "Recognising: " + interimTranscript;
+    }
+
+    if (finalTranscript.trim()) {
+      document.getElementById("chatInput").value =
+        finalTranscript.trim();
+
+      status.textContent = "Voice captured. Sending to AI...";
+      sendMessage();
+    }
   };
 
   recognition.onerror = function(event) {
-    document.getElementById("voiceStatus").textContent =
-      "Voice error: " + event.error;
+    status.textContent = "Voice error: " + event.error;
   };
 
   recognition.onend = function() {
-    document.getElementById("voiceButton").classList.remove("recording");
+    isListening = false;
+    voiceButton.classList.remove("recording");
+    voiceButton.textContent = "🎤 START VOICE";
+
+    if (status.textContent.includes("Listening")) {
+      status.textContent = "Voice recognition stopped.";
+    }
   };
 
-  recognition.start();
+  try {
+    recognition.start();
+  } catch(error) {
+    isListening = false;
+    voiceButton.classList.remove("recording");
+    voiceButton.textContent = "🎤 START VOICE";
+    status.textContent = "Unable to start microphone. Please try again.";
+  }
 }
 
 function stopVoice() {
-  if (recognition) recognition.stop();
+  if (recognition && isListening) {
+    recognition.stop();
+  }
+
+  isListening = false;
+
   document.getElementById("voiceButton").classList.remove("recording");
-  document.getElementById("voiceStatus").textContent = "Voice stopped.";
+  document.getElementById("voiceButton").textContent = "🎤 START VOICE";
+  document.getElementById("voiceStatus").textContent =
+    "Voice recognition stopped.";
 }
 </script>
+
 </body>
 </html>
