@@ -25,7 +25,6 @@ let waitingForCurrentFloor = false;
 // ======================================
 
 const FACILITY_FLOORS = {
-  // FLOOR 1
   "main entrance": 1,
   "entrance": 1,
   "pintu masuk": 1,
@@ -51,7 +50,6 @@ const FACILITY_FLOORS = {
   "toilet": 1,
   "tandas": 1,
 
-  // FLOOR 2
   "standard room": 2,
   "standard": 2,
   "bilik standard": 2,
@@ -71,7 +69,6 @@ const FACILITY_FLOORS = {
   "dobi": 2,
   "guest lounge": 2,
 
-  // FLOOR 3
   "swimming pool": 3,
   "swimming": 3,
   "pool": 3,
@@ -95,7 +92,7 @@ const FACILITY_FLOORS = {
 };
 
 // ======================================
-// CURRENT FLOOR
+// CURRENT FLOOR BUTTON
 // ======================================
 
 function selectCurrent(floor) {
@@ -121,14 +118,16 @@ function updateCurrentFloor(floor) {
 
   currentFloor = floor;
 
-  document.getElementById("currentDisplay").textContent =
-    "FLOOR " + floor;
+  const display = document.getElementById("currentDisplay");
+  if (display) {
+    display.textContent = "FLOOR " + floor;
+  }
 
   return true;
 }
 
 // ======================================
-// DESTINATION FLOOR
+// MANUAL DESTINATION BUTTON
 // ======================================
 
 async function selectDestination(floor) {
@@ -136,6 +135,12 @@ async function selectDestination(floor) {
 
   const result = document.getElementById("liftResult");
   result.classList.remove("hidden");
+
+  if (!currentFloor) {
+    result.className = "result error";
+    result.textContent = "Please select your current floor first.";
+    return;
+  }
 
   if (currentFloor === destinationFloor) {
     result.className = "result error";
@@ -161,7 +166,6 @@ async function selectDestination(floor) {
 
   } catch (error) {
     console.error(error);
-
     result.className = "result error";
     result.textContent = "Unable to send request. Please try again.";
   }
@@ -175,8 +179,10 @@ async function sendLiftRequest(current, destination) {
   current = Number(current);
   destination = Number(destination);
 
-  if (![1, 2, 3].includes(current) ||
-      ![1, 2, 3].includes(destination)) {
+  if (
+    ![1, 2, 3].includes(current) ||
+    ![1, 2, 3].includes(destination)
+  ) {
     throw new Error("Invalid floor selection.");
   }
 
@@ -230,7 +236,7 @@ function backToCurrent() {
 }
 
 // ======================================
-// AI WINDOW AND CHAT
+// AI WINDOW
 // ======================================
 
 function toggleAI() {
@@ -246,7 +252,7 @@ function addMessage(message, sender) {
       ? "message user-message"
       : "message ai-message";
 
-  div.textContent = message;
+  div.textContent = String(message || "");
 
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
@@ -262,66 +268,59 @@ function normaliseText(text) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[’']/g, "")
-    .replace(/[.,!?;:()]/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// ======================================
-// MALAY SHORTFORM NORMALISATION
-// ======================================
-
 function expandMalayShortform(text) {
-  let t = normaliseText(text);
+  let t = " " + normaliseText(text) + " ";
 
   const replacements = [
-    [/\bsy\b/g, "saya"],
-    [/\baku\b/g, "saya"],
-    [/\bko\b/g, "awak"],
-    [/\bkau\b/g, "awak"],
-    [/\bdye\b/g, "dia"],
-    [/\bdiaorg\b/g, "mereka"],
-    [/\bdorg\b/g, "mereka"],
-    [/\bkt\b/g, "kat"],
-    [/\bkat\b/g, "di"],
-    [/\bdkt\b/g, "di"],
-    [/\bskrg\b/g, "sekarang"],
-    [/\bskang\b/g, "sekarang"],
-    [/\bsekarang\b/g, "sekarang"],
-    [/\bnk\b/g, "nak"],
-    [/\bnek\b/g, "nak"],
-    [/\bpegi\b/g, "pergi"],
-    [/\bpi\b/g, "pergi"],
-    [/\bgi\b/g, "pergi"],
-    [/\bbawak\b/g, "bawa"],
-    [/\bbwok\b/g, "bawa"],
-    [/\bbawaklah\b/g, "bawa"],
-    [/\bmn\b/g, "mana"],
-    [/\bmaner\b/g, "mana"],
-    [/\bape\b/g, "apa"],
-    [/\bap\b/g, "apa"],
-    [/\bcamne\b/g, "bagaimana"],
-    [/\bmcm\b/g, "macam"],
-    [/\bcm\b/g, "macam"],
-    [/\bni\b/g, "ini"],
-    [/\btu\b/g, "itu"],
-    [/\bx\b/g, "tidak"],
-    [/\btak\b/g, "tidak"],
-    [/\btk\b/g, "tidak"],
-    [/\bdh\b/g, "sudah"],
-    [/\bdah\b/g, "sudah"],
-    [/\bblm\b/g, "belum"],
-    [/\bje\b/g, "sahaja"],
-    [/\bjer\b/g, "sahaja"],
-    [/\bpon\b/g, "pun"],
-    [/\bke\b/g, "ke"],
-    [/\bplk\b/g, "pula"],
-    [/\bpulak\b/g, "pula"],
-    [/\bdo\b/g, "buat"],
-    [/\bpls\b/g, "please"],
-    [/\bplz\b/g, "please"],
-    [/\bthx\b/g, "thanks"],
-    [/\bty\b/g, "thank you"]
+    [/\bsy\b/g, " saya "],
+    [/\bsye\b/g, " saya "],
+    [/\baku\b/g, " saya "],
+    [/\bko\b/g, " awak "],
+    [/\bkau\b/g, " awak "],
+    [/\bdye\b/g, " dia "],
+    [/\bdorg\b/g, " mereka "],
+    [/\bdri\b/g, " dari "],
+    [/\bdr\b/g, " dari "],
+    [/\bkt\b/g, " dekat "],
+    [/\bdkt\b/g, " dekat "],
+    [/\bkat\b/g, " dekat "],
+    [/\bnk\b/g, " nak "],
+    [/\bngk\b/g, " nak "],
+    [/\bnek\b/g, " nak "],
+    [/\bgi\b/g, " pergi "],
+    [/\bg\b/g, " pergi "],
+    [/\bpegi\b/g, " pergi "],
+    [/\bpi\b/g, " pergi "],
+    [/\bmn\b/g, " mana "],
+    [/\bmaner\b/g, " mana "],
+    [/\bbrp\b/g, " berapa "],
+    [/\btkt\b/g, " tingkat "],
+    [/\bskrg\b/g, " sekarang "],
+    [/\bskang\b/g, " sekarang "],
+    [/\bdh\b/g, " sudah "],
+    [/\bdah\b/g, " sudah "],
+    [/\bx\b/g, " tidak "],
+    [/\btak\b/g, " tidak "],
+    [/\btk\b/g, " tidak "],
+    [/\bblm\b/g, " belum "],
+    [/\bape\b/g, " apa "],
+    [/\bap\b/g, " apa "],
+    [/\bcamne\b/g, " bagaimana "],
+    [/\bmcm\b/g, " macam "],
+    [/\bcm\b/g, " macam "],
+    [/\bni\b/g, " ini "],
+    [/\btu\b/g, " itu "],
+    [/\bje\b/g, " sahaja "],
+    [/\bjer\b/g, " sahaja "],
+    [/\bpon\b/g, " pun "],
+    [/\bplk\b/g, " pula "],
+    [/\bpls\b/g, " please "],
+    [/\bplz\b/g, " please "]
   ];
 
   replacements.forEach(([pattern, replacement]) => {
@@ -332,49 +331,39 @@ function expandMalayShortform(text) {
 }
 
 // ======================================
-// DETECT CURRENT FLOOR FROM CHAT
+// CURRENT FLOOR DETECTION
+// Do not mistake destination floor as current floor.
 // ======================================
 
 function detectCurrentFloor(text) {
   const t = expandMalayShortform(text);
 
   const patterns = [
-    /\b(?:saya|aku|i am|im|currently|sekarang saya|sekarang aku)\s+(?:berada\s+)?(?:di|dekat|on|at|dalam)\s+(?:floor|tingkat|level)?\s*([123])\b/,
-    /\b(?:current floor|my floor|saya di tingkat|saya kat tingkat|saya dekat tingkat)\s*([123])\b/,
-    /\b(?:floor|tingkat|level)\s*([123])\b/
+    /\b(?:saya|awak)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari)\s+(?:floor|tingkat|level)?\s*(1|2|3)\b/,
+    /\b(?:saya|awak)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari)\s+(?:floor|tingkat|level)?\s*(satu|pertama|dua|kedua|tiga|ketiga)\b/,
+    /\b(?:i am|im|i)\s+(?:currently\s+)?(?:on|at|in)\s+(?:floor|level)?\s*(1|2|3)\b/,
+    /\b(?:from|dari)\s+(?:floor|tingkat|level)\s*(1|2|3)\b/,
+    /\b(?:current floor|my floor|tingkat saya|floor saya)\s*(?:is|ialah|adalah)?\s*(1|2|3)\b/
   ];
+
+  const words = {
+    satu: 1,
+    pertama: 1,
+    dua: 2,
+    kedua: 2,
+    tiga: 3,
+    ketiga: 3
+  };
 
   for (const pattern of patterns) {
     const match = t.match(pattern);
 
     if (match) {
-      return Number(match[1]);
+      return words[match[1]] || Number(match[1]);
     }
   }
 
-  const wordFloors = {
-    "satu": 1,
-    "pertama": 1,
-    "one": 1,
-    "dua": 2,
-    "kedua": 2,
-    "two": 2,
-    "tiga": 3,
-    "ketiga": 3,
-    "three": 3
-  };
-
-  const floorWordPattern =
-    /\b(?:saya|aku|i am|im|sekarang saya|sekarang aku)\s+(?:berada\s+)?(?:di|kat|dekat|on|at)\s+(?:floor|tingkat|level)?\s*(satu|pertama|one|dua|kedua|two|tiga|ketiga|three)\b/;
-
-  const wordMatch = t.match(floorWordPattern);
-
-  if (wordMatch) {
-    return wordFloors[wordMatch[1]];
-  }
-
-  // Accept a short answer such as "2" after the AI asks
-  // for the guest's current floor.
+  // Short answer: "1", "2", "3", "floor 2".
   if (waitingForCurrentFloor) {
     const shortMatch = t.match(
       /^(?:floor|tingkat|level)?\s*(1|2|3|satu|dua|tiga|one|two|three)$/
@@ -387,12 +376,12 @@ function detectCurrentFloor(text) {
         "1": 1,
         "2": 2,
         "3": 3,
-        "satu": 1,
-        "dua": 2,
-        "tiga": 3,
-        "one": 1,
-        "two": 2,
-        "three": 3
+        satu: 1,
+        dua: 2,
+        tiga: 3,
+        one: 1,
+        two: 2,
+        three: 3
       }[value];
     }
   }
@@ -401,29 +390,7 @@ function detectCurrentFloor(text) {
 }
 
 // ======================================
-// DETECT FACILITY
-// ======================================
-
-function detectFacilityFloor(text) {
-  const t = expandMalayShortform(text);
-
-  const facilities = Object.keys(FACILITY_FLOORS)
-    .sort((a, b) => b.length - a.length);
-
-  for (const facility of facilities) {
-    if (t.includes(facility)) {
-      return {
-        name: facility,
-        floor: FACILITY_FLOORS[facility]
-      };
-    }
-  }
-
-  return null;
-}
-
-// ======================================
-// DETECT CONFIRMATION
+// CONFIRMATION DETECTION
 // ======================================
 
 function isConfirmation(text) {
@@ -433,14 +400,13 @@ function isConfirmation(text) {
     "yes", "yeah", "yep", "y",
     "ya", "ye", "ok", "okay",
     "betul", "benar", "setuju",
-    "saya setuju", "sahkan",
-    "confirm", "confirmed",
+    "sahkan", "confirm", "confirmed",
     "i confirm", "i agree",
-    "boleh", "teruskan",
-    "hantar", "terus", "haah",
-    "haa", "aah", "baik",
-    "baiklah", "sure", "go ahead",
-    "do it", "jom", "nak"
+    "boleh", "teruskan", "hantar",
+    "terus", "haah", "haa", "aah",
+    "baik", "baiklah", "sure",
+    "go ahead", "do it", "jom",
+    "nak", "ya boleh", "boleh hantar"
   ];
 
   return yesWords.includes(t);
@@ -453,11 +419,10 @@ function isRejection(text) {
     "no", "nope", "n",
     "cancel", "cancel it",
     "do not proceed",
-    "tidak", "batal",
-    "jangan", "jangan hantar",
-    "tak setuju", "tidak setuju",
-    "tak nak", "tidak mahu",
-    "xnak", "tak jadi",
+    "tidak", "batal", "jangan",
+    "jangan hantar", "tak setuju",
+    "tidak setuju", "tak nak",
+    "tidak mahu", "tak jadi",
     "dont", "stop"
   ];
 
@@ -465,29 +430,32 @@ function isRejection(text) {
 }
 
 // ======================================
-// SUBMIT AI LIFT REQUEST
+// SUBMIT AI LIFT REQUEST TO FIREBASE
 // ======================================
 
 async function submitAILiftRequest(floor) {
+  floor = Number(floor);
+
   if (!currentFloor) {
+    waitingForCurrentFloor = true;
+
     addMessage(
       "Awak berada di tingkat berapa sekarang? Contohnya, Tingkat 2.",
       "ai"
     );
 
-    waitingForCurrentFloor = true;
     return;
   }
-
-  floor = Number(floor);
 
   if (![1, 2, 3].includes(floor)) {
-    addMessage("Please select a valid floor.", "ai");
+    addMessage("Maaf, tingkat destinasi tidak sah.", "ai");
     return;
   }
 
-  if (floor === currentFloor) {
+  if (currentFloor === floor) {
     addMessage("You are already here!", "ai");
+    pendingLiftRequest = null;
+    waitingForCurrentFloor = false;
     return;
   }
 
@@ -495,18 +463,22 @@ async function submitAILiftRequest(floor) {
     const queueId = await sendLiftRequest(currentFloor, floor);
 
     addMessage(
-      "Your elevator request has been submitted!\n\n" +
+      "PERMINTAAN LIF BERJAYA DIHANTAR!\n\n" +
       "Current Floor: " + currentFloor + "\n" +
       "Destination Floor: " + floor + "\n\n" +
       "Please wait for the lift.\nRequest ID: " + queueId,
       "ai"
     );
 
+    pendingLiftRequest = null;
+    waitingForCurrentFloor = false;
+
   } catch (error) {
-    console.error(error);
+    console.error("Firebase request error:", error);
 
     addMessage(
-      "I could not send the elevator request. Please try again.",
+      "Maaf, permintaan lif tidak berjaya dihantar ke Firebase. Sila cuba lagi.\n" +
+      error.message,
       "ai"
     );
   }
@@ -530,61 +502,78 @@ async function sendMessage() {
   const text = expandMalayShortform(originalText);
 
   // --------------------------------------
-  // 1. Detect current floor from message
+  // 1. If waiting for current floor
   // --------------------------------------
 
   const detectedFloor = detectCurrentFloor(originalText);
 
   if (detectedFloor !== null) {
     updateCurrentFloor(detectedFloor);
-    waitingForCurrentFloor = false;
 
     if (pendingLiftRequest) {
-      addMessage(
-        "Okay, awak sekarang di tingkat " + currentFloor +
-        ". Destinasi masih tingkat " +
-        pendingLiftRequest.destinationFloor +
-        ". Nak saya hantar permintaan lif?",
-        "ai"
-      );
+      const pending = pendingLiftRequest;
 
-      return;
+      waitingForCurrentFloor = false;
+
+      // Direct travel: send immediately after floor is supplied.
+      if (pending.type === "direct") {
+        await submitAILiftRequest(pending.destinationFloor);
+        return;
+      }
+
+      // Location offer: ask confirmation after floor is supplied.
+      if (pending.type === "offer") {
+        if (currentFloor === pending.destinationFloor) {
+          addMessage("You are already here!", "ai");
+          pendingLiftRequest = null;
+          return;
+        }
+
+        addMessage(
+          "Baik, awak sekarang di Tingkat " + currentFloor +
+          ". " + (pending.facility || "Destinasi tersebut") +
+          " berada di Tingkat " + pending.destinationFloor +
+          ". Nak saya hantar permintaan lif ke sana? Balas YES atau NO.",
+          "ai"
+        );
+
+        return;
+      }
     }
   }
 
   // --------------------------------------
-  // 2. Handle confirmation
+  // 2. Handle YES / confirmation
   // --------------------------------------
 
   if (pendingLiftRequest && isConfirmation(text)) {
-    const floor = pendingLiftRequest.destinationFloor;
+    const pending = pendingLiftRequest;
 
     if (!currentFloor) {
+      waitingForCurrentFloor = true;
+
       addMessage(
-        "Awak berada di tingkat berapa sekarang? Contohnya, Tingkat 2.",
+        "Boleh. Sebelum saya hantar, awak berada di tingkat berapa sekarang?",
         "ai"
       );
 
-      waitingForCurrentFloor = true;
       return;
     }
 
-    pendingLiftRequest = null;
-    waitingForCurrentFloor = false;
-
-    await submitAILiftRequest(floor);
+    await submitAILiftRequest(pending.destinationFloor);
     return;
   }
 
   // --------------------------------------
-  // 3. Handle rejection
+  // 3. Handle NO / cancellation
   // --------------------------------------
 
   if (pendingLiftRequest && isRejection(text)) {
     pendingLiftRequest = null;
+    waitingForCurrentFloor = false;
 
     addMessage(
-      "Okay, permintaan lif telah dibatalkan.",
+      "Okay, permintaan lif dibatalkan. Ada apa-apa lagi yang boleh saya bantu?",
       "ai"
     );
 
@@ -592,119 +581,22 @@ async function sendMessage() {
   }
 
   // --------------------------------------
-  // 4. Detect facility
+  // 4. Send message to backend
   // --------------------------------------
 
-  const facility = detectFacilityFloor(originalText);
-
-  // --------------------------------------
-  // 5. Detect direct travel intention
-  // --------------------------------------
-
-  const directTravelPattern =
-    /\b(nak pergi|pergi ke|bawa saya|bawak saya|hantar saya|panggil lif|nak ke|saya nak|i want to go|take me|bring me|send me|go to|call the lift|call elevator)\b/i;
-
-  const hasDirectTravelIntent =
-    directTravelPattern.test(text);
-
-  // --------------------------------------
-  // 6. Facility travel request
-  // --------------------------------------
-
-  if (facility && hasDirectTravelIntent) {
-    if (!currentFloor) {
-      pendingLiftRequest = {
-        destinationFloor: facility.floor,
-        facility: facility.name
-      };
-
-      waitingForCurrentFloor = true;
-
-      addMessage(
-        "Boleh! " + facility.name +
-        " berada di tingkat " + facility.floor +
-        ". Awak berada di tingkat berapa sekarang?",
-        "ai"
-      );
-
-      return;
-    }
-
-    if (currentFloor === facility.floor) {
-      addMessage(
-        "You are already here! " +
-        facility.name + " is on your current floor.",
-        "ai"
-      );
-
-      return;
-    }
-
-    pendingLiftRequest = {
-      destinationFloor: facility.floor,
-      facility: facility.name
-    };
-
-    addMessage(
-      facility.name + " berada di tingkat " +
-      facility.floor + ".\n\n" +
-      "Awak sekarang di tingkat " + currentFloor +
-      ". Nak saya hantar permintaan lif ke sana?\n\n" +
-      "Reply YES untuk sahkan atau NO untuk batal.",
-      "ai"
-    );
-
-    return;
-  }
-
-  // --------------------------------------
-  // 7. Facility location question
-  // --------------------------------------
-
-  const locationQuestionPattern =
-    /\b(where|which floor|what floor|kat mana|dekat mana|di mana|tingkat berapa|floor berapa|mana satu|lokasi|location)\b/i;
-
-  if (facility && locationQuestionPattern.test(text)) {
-    let reply =
-      facility.name + " berada di tingkat " +
-      facility.floor + ".";
-
-    if (currentFloor && currentFloor !== facility.floor) {
-      reply +=
-        "\n\nAwak sekarang di tingkat " + currentFloor +
-        ". Nak saya bawa awak ke sana?";
-    } else if (!currentFloor) {
-      reply +=
-        "\n\nNak saya bawa awak ke sana?";
-    } else {
-      reply += "\n\nYou are already here!";
-    }
-
-    if (!currentFloor || currentFloor !== facility.floor) {
-      pendingLiftRequest = {
-        destinationFloor: facility.floor,
-        facility: facility.name
-      };
-    }
-
-    addMessage(reply, "ai");
-    return;
-  }
-
-  // --------------------------------------
-  // 8. Ask AI backend
-  // --------------------------------------
+  const chatBox = document.getElementById("chatBox");
 
   const thinking = document.createElement("div");
   thinking.className = "message ai-message";
   thinking.textContent = "AI is thinking...";
 
-  const chatBox = document.getElementById("chatBox");
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
 
   isSendingMessage = true;
-  document.getElementById("sendButton").disabled = true;
+
+  const sendButton = document.getElementById("sendButton");
+  if (sendButton) sendButton.disabled = true;
 
   try {
     const response = await fetch(AI_API_URL, {
@@ -741,6 +633,7 @@ async function sendMessage() {
       throw new Error("Invalid AI response.");
     }
 
+    // Keep conversation history for normal AI chat.
     chatHistory.push({
       role: "user",
       content: originalText
@@ -753,55 +646,91 @@ async function sendMessage() {
 
     chatHistory = chatHistory.slice(-10);
 
-    // --------------------------------------
-    // 9. AI asks for current floor
-    // --------------------------------------
-
+    // Update current floor if backend detected it.
     if (
-      /current floor|select your current floor|tingkat berapa sekarang|berada di tingkat berapa/i.test(reply)
+      data.currentFloor &&
+      [1, 2, 3].includes(Number(data.currentFloor))
     ) {
-      waitingForCurrentFloor = true;
+      updateCurrentFloor(Number(data.currentFloor));
     }
 
     // --------------------------------------
-    // 10. AI asks for confirmation
+    // 5. DIRECT SEND TO FIREBASE
     // --------------------------------------
 
-    if (data.action === "confirm_lift") {
-      const floor = Number(data.destinationFloor);
+    if (data.action === "send_lift") {
+      const fromFloor = Number(data.currentFloor || currentFloor);
+      const toFloor = Number(data.destinationFloor);
 
-      if (![1, 2, 3].includes(floor)) {
-        addMessage(reply, "ai");
-        return;
-      }
-
-      if (!currentFloor) {
-        pendingLiftRequest = {
-          destinationFloor: floor
-        };
-
-        waitingForCurrentFloor = true;
-
+      if (![1, 2, 3].includes(fromFloor)) {
         addMessage(
-          "Awak berada di tingkat berapa sekarang?",
+          "Saya perlu tahu tingkat semasa awak sebelum menghantar permintaan lif.",
           "ai"
         );
 
+        pendingLiftRequest = {
+          type: "direct",
+          destinationFloor: toFloor,
+          facility: data.facility || ""
+        };
+
+        waitingForCurrentFloor = true;
         return;
       }
 
-      if (floor === currentFloor) {
+      updateCurrentFloor(fromFloor);
+
+      if (![1, 2, 3].includes(toFloor)) {
+        addMessage("Maaf, tingkat destinasi tidak sah.", "ai");
+        return;
+      }
+
+      if (fromFloor === toFloor) {
         addMessage("You are already here!", "ai");
         return;
       }
 
+      addMessage(reply, "ai");
+
+      await submitAILiftRequest(toFloor);
+      return;
+    }
+
+    // --------------------------------------
+    // 6. BACKEND ASKS FOR CURRENT FLOOR
+    // --------------------------------------
+
+    if (data.action === "ask_current_floor") {
       pendingLiftRequest = {
-        destinationFloor: floor
+        type: "direct",
+        destinationFloor: Number(data.destinationFloor),
+        facility: data.facility || ""
       };
 
+      waitingForCurrentFloor = true;
       addMessage(reply, "ai");
       return;
     }
+
+    // --------------------------------------
+    // 7. LOCATION QUESTION / OFFER
+    // --------------------------------------
+
+    if (data.action === "offer_lift") {
+      pendingLiftRequest = {
+        type: "offer",
+        destinationFloor: Number(data.destinationFloor),
+        facility: data.facility || ""
+      };
+
+      waitingForCurrentFloor = false;
+      addMessage(reply, "ai");
+      return;
+    }
+
+    // --------------------------------------
+    // 8. NORMAL AI RESPONSE
+    // --------------------------------------
 
     addMessage(reply, "ai");
 
@@ -818,7 +747,10 @@ async function sendMessage() {
 
   } finally {
     isSendingMessage = false;
-    document.getElementById("sendButton").disabled = false;
+
+    if (sendButton) {
+      sendButton.disabled = false;
+    }
   }
 }
 
@@ -840,7 +772,6 @@ function startVoice() {
   if (!SpeechRecognition) {
     status.textContent =
       "Voice recognition is not supported in this browser. Please use Chrome.";
-
     return;
   }
 
@@ -885,8 +816,7 @@ function startVoice() {
       i < event.results.length;
       i++
     ) {
-      const transcript =
-        event.results[i][0].transcript;
+      const transcript = event.results[i][0].transcript;
 
       if (event.results[i].isFinal) {
         finalTranscript += transcript;
@@ -896,8 +826,7 @@ function startVoice() {
     }
 
     if (interimTranscript) {
-      status.textContent =
-        "Recognising: " + interimTranscript;
+      status.textContent = "Recognising: " + interimTranscript;
     }
 
     if (finalTranscript.trim()) {
@@ -912,8 +841,7 @@ function startVoice() {
   };
 
   recognition.onerror = function(event) {
-    status.textContent =
-      "Voice error: " + event.error;
+    status.textContent = "Voice error: " + event.error;
   };
 
   recognition.onend = function() {
@@ -932,7 +860,6 @@ function startVoice() {
 
   try {
     recognition.start();
-
   } catch (error) {
     isListening = false;
 
@@ -955,13 +882,12 @@ function stopVoice() {
 
   isListening = false;
 
-  document.getElementById("voiceButton")
-    .classList.remove("recording");
+  const voiceButton = document.getElementById("voiceButton");
+  const status = document.getElementById("voiceStatus");
 
-  document.getElementById("voiceButton").textContent =
-    "🎤 START VOICE";
+  voiceButton.classList.remove("recording");
+  voiceButton.textContent = "🎤 START VOICE";
 
-  document.getElementById("voiceStatus").textContent =
-    "Voice recognition stopped.";
+  status.textContent = "Voice recognition stopped.";
 }
 </script>
