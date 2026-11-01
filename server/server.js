@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -17,12 +16,6 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 const GROQ_MODEL =
   process.env.GROQ_MODEL || "openai/gpt-oss-120b";
-
-const GROQ_VISION_MODEL =
-  process.env.GROQ_VISION_MODEL || "qwen/qwen3.8-27b";
-
-const HOTEL_EMAIL =
-  process.env.HOTEL_EMAIL || "caahdh8@gmail.com";
 
 // ======================================
 // HOTEL DIRECTORY
@@ -62,14 +55,6 @@ const FACILITIES = {
   ]
 };
 
-const REPORT_TYPES = [
-  "Lost Item",
-  "Suspicious Person",
-  "Facility Damage",
-  "General Complaint",
-  "Other"
-];
-
 // ======================================
 // MIDDLEWARE
 // ======================================
@@ -85,30 +70,8 @@ app.use(cors({
 }));
 
 app.use(express.json({
-  limit: "10mb"
+  limit: "1mb"
 }));
-
-// ======================================
-// EMAIL CONFIGURATION
-// ======================================
-
-let transporter = null;
-
-if (
-  process.env.EMAIL_USER &&
-  process.env.EMAIL_APP_PASSWORD
-) {
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: Number(process.env.SMTP_PORT || 465) === 465,
-
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_APP_PASSWORD
-    }
-  });
-}
 
 // ======================================
 // HELPER FUNCTIONS
@@ -119,32 +82,6 @@ function validFloor(floor) {
     Number.isInteger(Number(floor)) &&
     Number(floor) >= 1 &&
     Number(floor) <= 3
-  );
-}
-
-function escapeHTML(value) {
-  return String(value || "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  })[char]);
-}
-
-function validImage(image) {
-  return (
-    typeof image === "string" &&
-    /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)
-  );
-}
-
-function generateReportId() {
-  return (
-    "HOTEL-" +
-    Date.now().toString().slice(-8) +
-    "-" +
-    Math.floor(100 + Math.random() * 900)
   );
 }
 
@@ -192,14 +129,14 @@ function parseAIJson(content) {
 // GROQ AI FUNCTION
 // ======================================
 
-async function callGroq(messages, model) {
+async function callGroq(messages) {
   if (!GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY is missing in Render Environment");
   }
 
   async function sendRequest(useJsonMode) {
     const requestBody = {
-      model,
+      model: GROQ_MODEL,
       messages,
       temperature: 0.2
     };
@@ -238,12 +175,14 @@ async function callGroq(messages, model) {
     }
 
     const content = result.choices?.[0]?.message?.content;
+
     return parseAIJson(content);
   }
 
   try {
     return await sendRequest(true);
-  } catch (error) {
+
+  } catch(error) {
     console.error("Groq first attempt failed:", error.message);
 
     if (
@@ -265,17 +204,29 @@ async function callGroq(messages, model) {
 const SYSTEM_PROMPT = `
 You are the Hotel AI Assistant for an Intelligent Elevator System.
 
-Communicate in the same language as the guest.
+Your main purpose is to:
+1. Answer hotel guest questions.
+2. Help guests find hotel facilities.
+3. Understand natural language instructions.
+4. Help guests request the elevator using AI.
 
-Support:
-- English
-- Bahasa Melayu
+COMMUNICATION:
+
+- Support English and Bahasa Melayu.
+- Reply in the same language used by the guest.
+- Use simple, polite and natural language.
+- Understand voice-transcribed messages.
+- Voice input is converted into text before reaching you.
+- Do not assume that every message is a lift request.
+- Do not invent hotel information.
 
 Always return one valid JSON object.
 Do not use Markdown.
 Do not write anything outside the JSON object.
 
-HOTEL FLOOR DIRECTORY:
+======================================
+HOTEL FLOOR DIRECTORY
+======================================
 
 FLOOR 1:
 ${FACILITIES[1].join(", ")}
@@ -290,12 +241,13 @@ ${FACILITIES[3].join(", ")}
 LOCATION RULES
 ======================================
 
-1. Answer facility location questions using this directory.
+1. Answer facility location questions using the hotel directory.
 2. Never invent a facility or its floor.
 3. If a facility is not listed, explain that you cannot find it.
-4. Cafe is on Floor 1.
+4. Cafe, restaurant and reception are on Floor 1.
 5. Guest rooms are on Floor 2.
-6. Swimming pool and gymnasium are on Floor 3.
+6. Swimming pool, gymnasium, spa and sauna are on Floor 3.
+7. If the guest asks where a facility is, tell them its floor clearly.
 
 ======================================
 ELEVATOR RULES
@@ -304,16 +256,22 @@ ELEVATOR RULES
 1. The website provides the guest's current floor.
 2. Never guess the current floor.
 3. If the guest asks to go to a floor, identify the destination.
-4. If the guest asks to go to a facility, identify its floor.
-5. Tell the guest the current floor and destination floor.
-6. Ask the guest to confirm before submitting.
+4. If the guest asks to go to a facility, identify its floor using the hotel directory.
+5. Tell the guest their current floor and destination floor.
+6. Ask the guest to confirm before submitting an elevator request.
 7. If current floor equals destination floor, reply:
    "You are already here!"
 8. Never claim the lift has moved or arrived.
-9. The website sends actual requests to Firebase.
+9. The website sends actual elevator requests to Firebase.
 10. Never submit an elevator request without confirmation.
+11. Understand natural language requests in English and Bahasa Melayu.
+12. Understand voice-transcribed requests such as:
+    - "Take me to the swimming pool."
+    - "Saya nak pergi ke gym."
+    - "Bawa saya ke bilik Deluxe."
+    - "Please send the lift to the restaurant."
 
-When waiting for confirmation, use:
+When waiting for confirmation, return:
 
 {
   "action": "confirm_lift",
@@ -321,102 +279,24 @@ When waiting for confirmation, use:
   "destinationFloor": 3
 }
 
-Do not use action "submit" to bypass the website confirmation process.
+IMPORTANT:
+- Do not use action "submit" to bypass confirmation.
+- Do not send the lift request yourself.
+- The website handles the guest's YES or NO response.
+- If the guest says NO, cancel the pending request.
+- If the current floor is not provided, ask the guest to select their current floor first.
 
 ======================================
-REPORT RULES
+VOICE ASSISTANT RULES
 ======================================
 
-Supported report types:
-
-- Lost Item
-- Suspicious Person
-- Facility Damage
-- General Complaint
-- Other
-
-1. Help guests submit a report to the hotel.
-2. Ask for the report type.
-3. Ask for the incident floor.
-4. Ask for the incident location.
-5. Ask for a description if necessary.
-6. Do not ask for guest name, phone number, email or room number.
-7. Do not ask the guest to repeat information already provided.
-8. Remember report details from the conversation history.
-9. If an image is provided, use visible information only.
-10. Do not invent missing report information.
-
-======================================
-REPORT CONFIRMATION PROCESS
-======================================
-
-This is very important.
-
-The AI must NOT send an email.
-
-The website will send the email only after the guest confirms the report.
-
-Follow this process:
-
-STEP 1:
-Collect the report type, incident floor, location and description.
-
-STEP 2:
-If important information is missing, ask the guest for the missing information.
-
-STEP 3:
-When all required information is available, show a clear summary.
-
-STEP 4:
-Ask the guest to confirm the summary before submitting.
-
-STEP 5:
-Return action "confirm_report" with the complete report object.
-
-Example:
-
-{
-  "action": "confirm_report",
-  "reply": "Here is your report summary:\\nReport Type: Lost Item\\nFloor: 1\\nLocation: Main Entrance\\nDescription: A black wallet was lost.\\n\\nIs all the information correct? Please reply YES to submit or NO to cancel.",
-  "report": {
-    "type": "Lost Item",
-    "incidentFloor": 1,
-    "location": "Main Entrance",
-    "description": "A black wallet was lost."
-  }
-}
-
-IMPORTANT CONFIRMATION RULES:
-
-1. Do not return "confirm_report" until all required report details are available.
-2. Do not return action "report".
-3. Do not return action "submit" for reports.
-4. Do not claim that an email has been sent.
-5. The website handles the guest's YES or NO response.
-6. If the guest changes report information before confirmation, update the summary.
-7. If the guest says NO before confirmation, respond that the report can be changed or cancelled.
-8. Never ask for confirmation repeatedly after the website has already received it.
-
-======================================
-SUSPICIOUS PERSON AND SAFETY
-======================================
-
-1. Describe visible observations only.
-2. Never identify a person in an image.
-3. Never accuse anyone based on appearance.
-4. If there is immediate danger, advise the guest to move to a safe location and contact hotel security.
-5. Do not claim that hotel staff have investigated or resolved an incident.
-
-======================================
-IMAGE RULES
-======================================
-
-1. If an image is supplied, describe only what is visible.
-2. Do not invent details.
-3. Do not identify a person in the image.
-4. Do not accuse anyone based on appearance.
-5. If the image relates to a report, use visible details to help the guest describe the incident.
-6. The website may attach the uploaded image to the final hotel report.
+1. Treat voice-transcribed messages like normal typed messages.
+2. Do not tell the guest to type if their voice message is understandable.
+3. If the transcription is unclear, politely ask the guest to repeat.
+4. Understand common Malay and English expressions.
+5. Do not mistake ordinary questions for elevator commands.
+6. For facility requests, identify the correct floor before asking for confirmation.
+7. Do not claim that the microphone or voice recognition is active. The website handles microphone functions.
 
 ======================================
 RESPONSE FORMAT
@@ -433,31 +313,17 @@ ELEVATOR CONFIRMATION:
 
 {
   "action": "confirm_lift",
-  "reply": "Please confirm your destination.",
+  "reply": "You are currently on Floor 1. Your destination is Floor 3. Would you like me to send the lift?",
   "destinationFloor": 3
-}
-
-REPORT SUMMARY AND CONFIRMATION:
-
-{
-  "action": "confirm_report",
-  "reply": "Here is your report summary. Please confirm before submission.",
-  "report": {
-    "type": "Lost Item",
-    "incidentFloor": 1,
-    "location": "Main Entrance",
-    "description": "A black wallet was lost."
-  }
 }
 
 IMPORTANT:
 
 - Always return valid JSON.
-- Use the exact action names specified above.
-- Never invent missing report information.
-- Never claim an email has been sent.
+- Use only the action names specified above.
+- Never invent hotel information.
 - Never claim a lift has physically moved.
-- The website handles final report submission after confirmation.
+- Never submit a lift request without guest confirmation.
 `;
 
 // ======================================
@@ -478,8 +344,7 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     status: "healthy",
-    aiConfigured: Boolean(GROQ_API_KEY),
-    emailConfigured: Boolean(transporter)
+    aiConfigured: Boolean(GROQ_API_KEY)
   });
 });
 
@@ -492,8 +357,7 @@ app.post("/api/assistant", async (req, res) => {
     const {
       message,
       currentFloor,
-      history = [],
-      image
+      history = []
     } = req.body;
 
     if (!message || typeof message !== "string") {
@@ -535,51 +399,14 @@ app.post("/api/assistant", async (req, res) => {
           "\n\nGuest current floor: " +
           (currentFloor || "Not provided")
       },
-      ...safeHistory
-    ];
-
-    // ======================================
-    // IMAGE INPUT
-    // ======================================
-
-    if (image) {
-      if (!validImage(image)) {
-        return res.status(400).json({
-          error: "Unsupported image format"
-        });
-      }
-
-      messages.push({
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: message
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: image
-            }
-          }
-        ]
-      });
-    } else {
-      messages.push({
+      ...safeHistory,
+      {
         role: "user",
         content: message
-      });
-    }
+      }
+    ];
 
-    // ======================================
-    // SELECT AI MODEL
-    // ======================================
-
-    const model = image ? GROQ_VISION_MODEL : GROQ_MODEL;
-
-    console.log("Using AI model:", model);
-
-    const data = await callGroq(messages, model);
+    const data = await callGroq(messages);
 
     if (!data || typeof data.reply !== "string") {
       throw new Error("Invalid AI response format");
@@ -613,198 +440,29 @@ app.post("/api/assistant", async (req, res) => {
       data.destinationFloor = Number(data.destinationFloor);
     }
 
-    // ======================================
-    // VALIDATE REPORT CONFIRMATION
-    // ======================================
-
-    if (data.action === "confirm_report") {
-      const report = data.report;
-
-      if (
-        !report ||
-        !REPORT_TYPES.includes(report.type) ||
-        !validFloor(report.incidentFloor) ||
-        typeof report.location !== "string" ||
-        !report.location.trim()
-      ) {
-        return res.status(400).json({
-          error: "Incomplete report information"
-        });
-      }
-
-      if (
-        typeof report.description !== "string" &&
-        report.description !== undefined
-      ) {
-        return res.status(400).json({
-          error: "Invalid report description"
-        });
-      }
-
-      data.report = {
-        type: report.type,
-        incidentFloor: Number(report.incidentFloor),
-        location: report.location.trim().slice(0, 300),
-        description: String(report.description || "").trim().slice(0, 2000)
-      };
-    }
-
-    // Do not allow the AI to trigger email submission directly.
-    if (data.action === "report") {
+    // Prevent AI from bypassing website confirmation.
+    if (data.action === "submit") {
       return res.json({
         action: "chat",
-        reply: "I have prepared the report details. Please confirm the report summary before it is submitted."
+        reply: "Please confirm the elevator destination first."
       });
+    }
+
+    // Only allow the supported action types.
+    if (
+      data.action !== "chat" &&
+      data.action !== "confirm_lift"
+    ) {
+      data.action = "chat";
     }
 
     return res.json(data);
 
-  } catch (error) {
+  } catch(error) {
     console.error("Assistant error:", error);
 
     return res.status(500).json({
       error: "AI assistant is temporarily unavailable",
-      details: error.message
-    });
-  }
-});
-
-// ======================================
-// REPORT EMAIL API
-// ======================================
-
-app.post("/api/report", async (req, res) => {
-  try {
-    if (!transporter) {
-      return res.status(503).json({
-        error: "Email service is not configured"
-      });
-    }
-
-    const {
-      type,
-      incidentFloor,
-      location,
-      description,
-      image
-    } = req.body;
-
-    // Validate report type.
-    if (!REPORT_TYPES.includes(type)) {
-      return res.status(400).json({
-        error: "Invalid report type"
-      });
-    }
-
-    // Validate floor.
-    if (!validFloor(incidentFloor)) {
-      return res.status(400).json({
-        error: "Invalid incident floor"
-      });
-    }
-
-    // Validate location.
-    if (
-      typeof location !== "string" ||
-      !location.trim()
-    ) {
-      return res.status(400).json({
-        error: "Incident location is required"
-      });
-    }
-
-    // Validate description.
-    if (
-      description !== undefined &&
-      typeof description !== "string"
-    ) {
-      return res.status(400).json({
-        error: "Invalid report description"
-      });
-    }
-
-    // Validate image.
-    if (image && !validImage(image)) {
-      return res.status(400).json({
-        error: "Invalid image format"
-      });
-    }
-
-    const reportId = generateReportId();
-
-    const dateTime = new Intl.DateTimeFormat("en-MY", {
-      dateStyle: "full",
-      timeStyle: "long",
-      timeZone: "Asia/Kuala_Lumpur"
-    }).format(new Date());
-
-    // ======================================
-    // EMAIL CONTENT
-    // ======================================
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: HOTEL_EMAIL,
-      subject: `New Hotel Report - ${reportId}`,
-
-      html: `
-        <h2>Hotel Incident Report</h2>
-
-        <p><b>Report ID:</b> ${escapeHTML(reportId)}</p>
-        <p><b>Date:</b> ${escapeHTML(dateTime)}</p>
-        <p><b>Type:</b> ${escapeHTML(type)}</p>
-        <p><b>Floor:</b> ${Number(incidentFloor)}</p>
-        <p><b>Location:</b> ${escapeHTML(location)}</p>
-        <p><b>Description:</b> ${escapeHTML(description || "Not provided")}</p>
-        <p><b>Reporter:</b> Anonymous</p>
-      `
-    };
-
-    // ======================================
-    // IMAGE ATTACHMENT
-    // ======================================
-
-    if (image) {
-      const matches = image.match(
-        /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i
-      );
-
-      if (matches) {
-        const extension =
-          matches[1].toLowerCase() === "jpeg"
-            ? "jpg"
-            : matches[1].toLowerCase();
-
-        mailOptions.attachments = [
-          {
-            filename: `report-${reportId}.${extension}`,
-            content: Buffer.from(matches[2], "base64"),
-            contentType: `image/${matches[1].toLowerCase()}`
-          }
-        ];
-      }
-    }
-
-    // ======================================
-    // SEND EMAIL
-    // ======================================
-
-    await transporter.sendMail(mailOptions);
-
-    console.log("Report email sent successfully:", reportId);
-
-    return res.json({
-      success: true,
-      reportId,
-      dateTime,
-      message: "Report submitted successfully"
-    });
-
-  } catch (error) {
-    console.error("Report error:", error);
-
-    return res.status(500).json({
-      error: "Unable to submit report",
       details: error.message
     });
   }
@@ -828,7 +486,5 @@ app.use((error, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Vision model: ${GROQ_VISION_MODEL}`);
   console.log(`Chat model: ${GROQ_MODEL}`);
-  console.log(`Email configured: ${Boolean(transporter)}`);
 });
