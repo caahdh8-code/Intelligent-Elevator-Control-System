@@ -1,269 +1,156 @@
-<script>
-// ======================================
-// CONFIGURATION
-// ======================================
+const express = require("express");
+const cors = require("cors");
 
-const FIREBASE_DB_URL =
-  "https://intelligent-elevator-default-rtdb.asia-southeast1.firebasedatabase.app";
+const app = express();
+const PORT = process.env.PORT || 10000;
 
-const QUEUE_PATH = "Elevator/Queue";
+const WEBSITE_URL =
+  process.env.WEBSITE_URL || "https://caahdh8-code.github.io";
 
-const AI_API_URL =
-  "https://intelligent-elevator-control-system-1.onrender.com/api/assistant";
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODEL =
+  process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-let currentFloor = null;
-let destinationFloor = null;
-let recognition = null;
-let chatHistory = [];
-let pendingLiftRequest = null;
-let isSendingMessage = false;
-let isListening = false;
-let waitingForCurrentFloor = false;
-
-// ======================================
-// HOTEL FACILITY DIRECTORY
-// ======================================
-
-const FACILITY_FLOORS = {
-  "main entrance": 1,
-  "entrance": 1,
-  "pintu masuk": 1,
-  "lobby": 1,
-  "reception": 1,
-  "front desk": 1,
-  "kaunter": 1,
-  "waiting lounge": 1,
-  "lounge": 1,
-  "restaurant": 1,
-  "restoran": 1,
-  "makan": 1,
-  "cafe": 1,
-  "café": 1,
-  "kafe": 1,
-  "meeting room": 1,
-  "bilik meeting": 1,
-  "bilik mesyuarat": 1,
-  "hotel office": 1,
-  "office": 1,
-  "pejabat": 1,
-  "public toilet": 1,
-  "toilet": 1,
-  "tandas": 1,
-
-  "standard room": 2,
-  "standard": 2,
-  "bilik standard": 2,
-  "deluxe room": 2,
-  "deluxe": 2,
-  "bilik deluxe": 2,
-  "twin room": 2,
-  "twin": 2,
-  "bilik twin": 2,
-  "family room": 2,
-  "family": 2,
-  "bilik family": 2,
-  "housekeeping room": 2,
-  "housekeeping": 2,
-  "laundry room": 2,
-  "laundry": 2,
-  "dobi": 2,
-  "guest lounge": 2,
-
-  "swimming pool": 3,
-  "swimming": 3,
-  "pool": 3,
-  "kolam": 3,
-  "kolam renang": 3,
-  "gymnasium": 3,
-  "gym": 3,
-  "gim": 3,
-  "spa and massage": 3,
-  "spa": 3,
-  "massage": 3,
-  "urut": 3,
-  "sauna": 3,
-  "rooftop restaurant": 3,
-  "rooftop": 3,
-  "sky lounge": 3,
-  "kids playroom": 3,
-  "playroom": 3,
-  "kids room": 3,
-  "bilik kanak kanak": 3
-};
-
-// ======================================
-// CURRENT FLOOR BUTTON
-// ======================================
-
-function selectCurrent(floor) {
-  currentFloor = Number(floor);
-
-  document.getElementById("currentPage").classList.add("hidden");
-  document.getElementById("destinationPage").classList.remove("hidden");
-
-  document.getElementById("currentDisplay").textContent =
-    "FLOOR " + currentFloor;
-
-  const result = document.getElementById("liftResult");
-  result.classList.add("hidden");
-  result.textContent = "";
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-function updateCurrentFloor(floor) {
-  floor = Number(floor);
-
-  if (![1, 2, 3].includes(floor)) return false;
-
-  currentFloor = floor;
-
-  const display = document.getElementById("currentDisplay");
-  if (display) {
-    display.textContent = "FLOOR " + floor;
-  }
-
-  return true;
-}
-
-// ======================================
-// MANUAL DESTINATION BUTTON
-// ======================================
-
-async function selectDestination(floor) {
-  destinationFloor = Number(floor);
-
-  const result = document.getElementById("liftResult");
-  result.classList.remove("hidden");
-
-  if (!currentFloor) {
-    result.className = "result error";
-    result.textContent = "Please select your current floor first.";
-    return;
-  }
-
-  if (currentFloor === destinationFloor) {
-    result.className = "result error";
-    result.textContent = "You are already here!";
-    return;
-  }
-
-  result.className = "result";
-  result.textContent = "Please wait for the lift. Sending request...";
-
-  try {
-    const queueId = await sendLiftRequest(
-      currentFloor,
-      destinationFloor
-    );
-
-    result.className = "result success";
-    result.textContent =
-      "REQUEST SUBMITTED!\n\n" +
-      "Current Floor: " + currentFloor + "\n" +
-      "Destination Floor: " + destinationFloor + "\n\n" +
-      "Please wait for the lift.\nRequest ID: " + queueId;
-
-  } catch (error) {
-    console.error(error);
-    result.className = "result error";
-    result.textContent = "Unable to send request. Please try again.";
-  }
-}
-
-// ======================================
-// FIREBASE QUEUE
-// ======================================
-
-async function sendLiftRequest(current, destination) {
-  current = Number(current);
-  destination = Number(destination);
-
-  if (
-    ![1, 2, 3].includes(current) ||
-    ![1, 2, 3].includes(destination)
-  ) {
-    throw new Error("Invalid floor selection.");
-  }
-
-  if (current === destination) {
-    throw new Error("You are already here!");
-  }
-
-  const request = {
-    currentFloor: current,
-    destinationFloor: destination,
-    status: "WAITING",
-    createdAt: Date.now()
-  };
-
-  const response = await fetch(
-    `${FIREBASE_DB_URL}/${QUEUE_PATH}.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(request)
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || origin === WEBSITE_URL) {
+      return callback(null, true);
     }
-  );
-
-  if (!response.ok) {
-    throw new Error("Firebase queue error: " + response.status);
+    return callback(new Error("Origin not allowed by CORS"));
   }
+}));
 
-  const data = await response.json();
+app.use(express.json({ limit: "1mb" }));
 
-  if (!data || !data.name) {
-    throw new Error("Firebase did not return a queue ID.");
+// ======================================
+// HOTEL DIRECTORY
+// ======================================
+
+const FACILITIES = [
+  {
+    floor: 1,
+    name: "Main Entrance",
+    aliases: ["main entrance", "entrance", "pintu masuk"]
+  },
+  {
+    floor: 1,
+    name: "Reception",
+    aliases: ["reception", "front desk", "kaunter", "kaunter reception"]
+  },
+  {
+    floor: 1,
+    name: "Waiting Lounge",
+    aliases: ["waiting lounge", "ruang menunggu"]
+  },
+  {
+    floor: 1,
+    name: "Restaurant",
+    aliases: ["restaurant", "restoran", "tempat makan"]
+  },
+  {
+    floor: 1,
+    name: "Cafe",
+    aliases: ["cafe", "café", "coffee shop", "kedai kopi"]
+  },
+  {
+    floor: 1,
+    name: "Meeting Room",
+    aliases: ["meeting room", "bilik meeting", "bilik mesyuarat"]
+  },
+  {
+    floor: 1,
+    name: "Hotel Office",
+    aliases: ["hotel office", "office", "pejabat"]
+  },
+  {
+    floor: 1,
+    name: "Public Toilet",
+    aliases: ["public toilet", "toilet", "tandas", "bilik air"]
+  },
+  {
+    floor: 2,
+    name: "Standard Room",
+    aliases: ["standard room", "standard", "bilik standard"]
+  },
+  {
+    floor: 2,
+    name: "Deluxe Room",
+    aliases: ["deluxe room", "deluxe", "bilik deluxe"]
+  },
+  {
+    floor: 2,
+    name: "Twin Room",
+    aliases: ["twin room", "twin", "bilik twin"]
+  },
+  {
+    floor: 2,
+    name: "Family Room",
+    aliases: ["family room", "family", "bilik family", "bilik keluarga"]
+  },
+  {
+    floor: 2,
+    name: "Housekeeping Room",
+    aliases: ["housekeeping room", "housekeeping"]
+  },
+  {
+    floor: 2,
+    name: "Laundry Room",
+    aliases: ["laundry room", "laundry", "dobi"]
+  },
+  {
+    floor: 2,
+    name: "Guest Lounge",
+    aliases: ["guest lounge", "ruang tetamu"]
+  },
+  {
+    floor: 3,
+    name: "Swimming Pool",
+    aliases: [
+      "swimming pool", "pool", "swimming",
+      "kolam", "kolam renang"
+    ]
+  },
+  {
+    floor: 3,
+    name: "Gymnasium",
+    aliases: ["gymnasium", "gym", "fitness", "fitness room"]
+  },
+  {
+    floor: 3,
+    name: "Spa and Massage",
+    aliases: ["spa and massage", "spa", "massage", "urut"]
+  },
+  {
+    floor: 3,
+    name: "Sauna",
+    aliases: ["sauna"]
+  },
+  {
+    floor: 3,
+    name: "Rooftop Restaurant",
+    aliases: ["rooftop restaurant", "rooftop", "restoran rooftop"]
+  },
+  {
+    floor: 3,
+    name: "Sky Lounge",
+    aliases: ["sky lounge"]
+  },
+  {
+    floor: 3,
+    name: "Kids Playroom",
+    aliases: [
+      "kids playroom", "playroom",
+      "bilik permainan kanak kanak"
+    ]
   }
-
-  return data.name;
-}
-
-// ======================================
-// BACK BUTTON
-// ======================================
-
-function backToCurrent() {
-  currentFloor = null;
-  destinationFloor = null;
-
-  document.getElementById("destinationPage").classList.add("hidden");
-  document.getElementById("currentPage").classList.remove("hidden");
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-// ======================================
-// AI WINDOW
-// ======================================
-
-function toggleAI() {
-  document.getElementById("aiWindow").classList.toggle("hidden");
-}
-
-function addMessage(message, sender) {
-  const box = document.getElementById("chatBox");
-  const div = document.createElement("div");
-
-  div.className =
-    sender === "user"
-      ? "message user-message"
-      : "message ai-message";
-
-  div.textContent = String(message || "");
-
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
+];
 
 // ======================================
 // TEXT NORMALISATION
 // ======================================
 
-function normaliseText(text) {
-  return String(text || "")
+function normaliseText(value) {
+  return String(value || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -273,78 +160,57 @@ function normaliseText(text) {
     .trim();
 }
 
-function expandMalayShortform(text) {
-  let t = " " + normaliseText(text) + " ";
+function expandShortforms(value) {
+  let text = " " + normaliseText(value) + " ";
 
   const replacements = [
     [/\bsy\b/g, " saya "],
     [/\bsye\b/g, " saya "],
     [/\baku\b/g, " saya "],
-    [/\bko\b/g, " awak "],
-    [/\bkau\b/g, " awak "],
-    [/\bdye\b/g, " dia "],
-    [/\bdorg\b/g, " mereka "],
-    [/\bdri\b/g, " dari "],
-    [/\bdr\b/g, " dari "],
     [/\bkt\b/g, " dekat "],
     [/\bdkt\b/g, " dekat "],
-    [/\bkat\b/g, " dekat "],
+    [/\bdri\b/g, " dari "],
+    [/\bdr\b/g, " dari "],
     [/\bnk\b/g, " nak "],
     [/\bngk\b/g, " nak "],
-    [/\bnek\b/g, " nak "],
     [/\bgi\b/g, " pergi "],
-    [/\bg\b/g, " pergi "],
     [/\bpegi\b/g, " pergi "],
-    [/\bpi\b/g, " pergi "],
-    [/\bmn\b/g, " mana "],
-    [/\bmaner\b/g, " mana "],
     [/\bbrp\b/g, " berapa "],
+    [/\bmn\b/g, " mana "],
     [/\btkt\b/g, " tingkat "],
-    [/\bskrg\b/g, " sekarang "],
-    [/\bskang\b/g, " sekarang "],
-    [/\bdh\b/g, " sudah "],
-    [/\bdah\b/g, " sudah "],
-    [/\bx\b/g, " tidak "],
-    [/\btak\b/g, " tidak "],
-    [/\btk\b/g, " tidak "],
-    [/\bblm\b/g, " belum "],
-    [/\bape\b/g, " apa "],
-    [/\bap\b/g, " apa "],
-    [/\bcamne\b/g, " bagaimana "],
-    [/\bmcm\b/g, " macam "],
-    [/\bcm\b/g, " macam "],
-    [/\bni\b/g, " ini "],
-    [/\btu\b/g, " itu "],
-    [/\bje\b/g, " sahaja "],
-    [/\bjer\b/g, " sahaja "],
-    [/\bpon\b/g, " pun "],
-    [/\bplk\b/g, " pula "],
     [/\bpls\b/g, " please "],
     [/\bplz\b/g, " please "]
   ];
 
-  replacements.forEach(([pattern, replacement]) => {
-    t = t.replace(pattern, replacement);
-  });
+  for (const [pattern, replacement] of replacements) {
+    text = text.replace(pattern, replacement);
+  }
 
-  return t.replace(/\s+/g, " ").trim();
+  return text.replace(/\s+/g, " ").trim();
 }
 
 // ======================================
-// CURRENT FLOOR DETECTION
-// Do not mistake destination floor as current floor.
+// FLOOR DETECTION
 // ======================================
 
-function detectCurrentFloor(text) {
-  const t = expandMalayShortform(text);
+function validFloor(value) {
+  const floor = Number(value);
+  return Number.isInteger(floor) && floor >= 1 && floor <= 3;
+}
+
+function detectCurrentFloor(message) {
+  const text = expandShortforms(message);
 
   const patterns = [
-    /\b(?:saya|awak)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari)\s+(?:floor|tingkat|level)?\s*(1|2|3)\b/,
-    /\b(?:saya|awak)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari)\s+(?:floor|tingkat|level)?\s*(satu|pertama|dua|kedua|tiga|ketiga)\b/,
-    /\b(?:i am|im|i)\s+(?:currently\s+)?(?:on|at|in)\s+(?:floor|level)?\s*(1|2|3)\b/,
-    /\b(?:from|dari)\s+(?:floor|tingkat|level)\s*(1|2|3)\b/,
-    /\b(?:current floor|my floor|tingkat saya|floor saya)\s*(?:is|ialah|adalah)?\s*(1|2|3)\b/
+    /\b(?:saya|aku|i|im|i am)\s+(?:sekarang\s+)?(?:berada\s+)?(?:di|dekat|dari|at|on)\s+(?:floor|level|tingkat)\s*([1-3])\b/,
+    /\b(?:dari|from)\s+(?:floor|level|tingkat)\s*([1-3])\b/,
+    /\b(?:current floor|my floor|floor saya|tingkat saya)\s*(?:is|ialah|adalah)?\s*([1-3])\b/
   ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return Number(match[1]);
+  }
 
   const words = {
     satu: 1,
@@ -355,539 +221,335 @@ function detectCurrentFloor(text) {
     ketiga: 3
   };
 
-  for (const pattern of patterns) {
-    const match = t.match(pattern);
+  const match = text.match(
+    /\b(?:floor|level|tingkat)\s+(satu|pertama|dua|kedua|tiga|ketiga)\b/
+  );
 
-    if (match) {
-      return words[match[1]] || Number(match[1]);
-    }
-  }
-
-  // Short answer: "1", "2", "3", "floor 2".
-  if (waitingForCurrentFloor) {
-    const shortMatch = t.match(
-      /^(?:floor|tingkat|level)?\s*(1|2|3|satu|dua|tiga|one|two|three)$/
-    );
-
-    if (shortMatch) {
-      const value = shortMatch[1];
-
-      return {
-        "1": 1,
-        "2": 2,
-        "3": 3,
-        satu: 1,
-        dua: 2,
-        tiga: 3,
-        one: 1,
-        two: 2,
-        three: 3
-      }[value];
-    }
-  }
+  if (match) return words[match[1]];
 
   return null;
 }
 
 // ======================================
-// CONFIRMATION DETECTION
+// FACILITY DETECTION
 // ======================================
 
-function isConfirmation(text) {
-  const t = expandMalayShortform(text);
+function findFacility(message) {
+  const text = " " + expandShortforms(message) + " ";
 
-  const yesWords = [
-    "yes", "yeah", "yep", "y",
-    "ya", "ye", "ok", "okay",
-    "betul", "benar", "setuju",
-    "sahkan", "confirm", "confirmed",
-    "i confirm", "i agree",
-    "boleh", "teruskan", "hantar",
-    "terus", "haah", "haa", "aah",
-    "baik", "baiklah", "sure",
-    "go ahead", "do it", "jom",
-    "nak", "ya boleh", "boleh hantar"
-  ];
+  const matches = [];
 
-  return yesWords.includes(t);
-}
+  for (const facility of FACILITIES) {
+    for (const alias of facility.aliases) {
+      const name = normaliseText(alias);
 
-function isRejection(text) {
-  const t = expandMalayShortform(text);
-
-  const noWords = [
-    "no", "nope", "n",
-    "cancel", "cancel it",
-    "do not proceed",
-    "tidak", "batal", "jangan",
-    "jangan hantar", "tak setuju",
-    "tidak setuju", "tak nak",
-    "tidak mahu", "tak jadi",
-    "dont", "stop"
-  ];
-
-  return noWords.includes(t);
-}
-
-// ======================================
-// SUBMIT AI LIFT REQUEST TO FIREBASE
-// ======================================
-
-async function submitAILiftRequest(floor) {
-  floor = Number(floor);
-
-  if (!currentFloor) {
-    waitingForCurrentFloor = true;
-
-    addMessage(
-      "Awak berada di tingkat berapa sekarang? Contohnya, Tingkat 2.",
-      "ai"
-    );
-
-    return;
-  }
-
-  if (![1, 2, 3].includes(floor)) {
-    addMessage("Maaf, tingkat destinasi tidak sah.", "ai");
-    return;
-  }
-
-  if (currentFloor === floor) {
-    addMessage("You are already here!", "ai");
-    pendingLiftRequest = null;
-    waitingForCurrentFloor = false;
-    return;
-  }
-
-  try {
-    const queueId = await sendLiftRequest(currentFloor, floor);
-
-    addMessage(
-      "PERMINTAAN LIF BERJAYA DIHANTAR!\n\n" +
-      "Current Floor: " + currentFloor + "\n" +
-      "Destination Floor: " + floor + "\n\n" +
-      "Please wait for the lift.\nRequest ID: " + queueId,
-      "ai"
-    );
-
-    pendingLiftRequest = null;
-    waitingForCurrentFloor = false;
-
-  } catch (error) {
-    console.error("Firebase request error:", error);
-
-    addMessage(
-      "Maaf, permintaan lif tidak berjaya dihantar ke Firebase. Sila cuba lagi.\n" +
-      error.message,
-      "ai"
-    );
-  }
-}
-
-// ======================================
-// SEND MESSAGE TO AI
-// ======================================
-
-async function sendMessage() {
-  if (isSendingMessage) return;
-
-  const input = document.getElementById("chatInput");
-  const originalText = input.value.trim();
-
-  if (!originalText) return;
-
-  input.value = "";
-  addMessage(originalText, "user");
-
-  const text = expandMalayShortform(originalText);
-
-  // --------------------------------------
-  // 1. If waiting for current floor
-  // --------------------------------------
-
-  const detectedFloor = detectCurrentFloor(originalText);
-
-  if (detectedFloor !== null) {
-    updateCurrentFloor(detectedFloor);
-
-    if (pendingLiftRequest) {
-      const pending = pendingLiftRequest;
-
-      waitingForCurrentFloor = false;
-
-      // Direct travel: send immediately after floor is supplied.
-      if (pending.type === "direct") {
-        await submitAILiftRequest(pending.destinationFloor);
-        return;
-      }
-
-      // Location offer: ask confirmation after floor is supplied.
-      if (pending.type === "offer") {
-        if (currentFloor === pending.destinationFloor) {
-          addMessage("You are already here!", "ai");
-          pendingLiftRequest = null;
-          return;
-        }
-
-        addMessage(
-          "Baik, awak sekarang di Tingkat " + currentFloor +
-          ". " + (pending.facility || "Destinasi tersebut") +
-          " berada di Tingkat " + pending.destinationFloor +
-          ". Nak saya hantar permintaan lif ke sana? Balas YES atau NO.",
-          "ai"
-        );
-
-        return;
+      if (text.includes(" " + name + " ")) {
+        matches.push({
+          ...facility,
+          matchedAlias: alias,
+          length: name.length
+        });
       }
     }
   }
 
-  // --------------------------------------
-  // 2. Handle YES / confirmation
-  // --------------------------------------
+  matches.sort((a, b) => b.length - a.length);
 
-  if (pendingLiftRequest && isConfirmation(text)) {
-    const pending = pendingLiftRequest;
+  return matches[0] || null;
+}
 
-    if (!currentFloor) {
-      waitingForCurrentFloor = true;
+// ======================================
+// INTENT DETECTION
+// ======================================
 
-      addMessage(
-        "Boleh. Sebelum saya hantar, awak berada di tingkat berapa sekarang?",
-        "ai"
-      );
+function isLocationQuestion(message) {
+  const text = expandShortforms(message);
 
-      return;
-    }
+  return (
+    /\b(where|where is|where are|which floor|what floor|located|location)\b/.test(text) ||
+    /\b(mana|di mana|dekat mana|tingkat berapa|floor berapa|berapa tingkat)\b/.test(text)
+  );
+}
 
-    await submitAILiftRequest(pending.destinationFloor);
-    return;
+function isTravelCommand(message) {
+  const text = expandShortforms(message);
+
+  return (
+    /\b(take me|bring me|send me|i want to go|i wanna go|i need to go|go to|head to|send the lift|call the lift|call elevator)\b/.test(text) ||
+    /\b(nak pergi|mahu pergi|ingin pergi|bawa saya|bawak saya|hantar saya|saya nak ke|saya mahu ke|pergi ke|nak ke|panggil lif|hantar lif)\b/.test(text)
+  );
+}
+
+// ======================================
+// LANGUAGE DETECTION
+// ======================================
+
+function detectLanguage(message) {
+  const text = expandShortforms(message);
+
+  if (/\b(saya|awak|aku|nak|pergi|tingkat|dengan|mana|berapa|dekat|bawa|hantar)\b/.test(text)) {
+    return "ms";
   }
 
-  // --------------------------------------
-  // 3. Handle NO / cancellation
-  // --------------------------------------
+  return "en";
+}
 
-  if (pendingLiftRequest && isRejection(text)) {
-    pendingLiftRequest = null;
-    waitingForCurrentFloor = false;
+// ======================================
+// RESPONSE HELPERS
+// ======================================
 
-    addMessage(
-      "Okay, permintaan lif dibatalkan. Ada apa-apa lagi yang boleh saya bantu?",
-      "ai"
-    );
-
-    return;
+function locationReply(facility, language) {
+  if (language === "ms") {
+    return facility.name + " berada di Tingkat " +
+      facility.floor + ". Nak saya bawa awak ke sana?";
   }
 
-  // --------------------------------------
-  // 4. Send message to backend
-  // --------------------------------------
+  return facility.name + " is on Floor " +
+    facility.floor + ". Would you like me to take you there?";
+}
 
-  const chatBox = document.getElementById("chatBox");
+function askFloorReply(language) {
+  return language === "ms"
+    ? "Boleh beritahu saya sekarang awak berada di tingkat berapa?"
+    : "May I know which floor you are currently on?";
+}
 
-  const thinking = document.createElement("div");
-  thinking.className = "message ai-message";
-  thinking.textContent = "AI is thinking...";
+// ======================================
+// GROQ AI
+// ======================================
 
-  chatBox.appendChild(thinking);
-  chatBox.scrollTop = chatBox.scrollHeight;
+const SYSTEM_PROMPT = `
+You are the Hotel AI Assistant for an Intelligent Elevator System.
 
-  isSendingMessage = true;
+You must understand:
+- English and Bahasa Melayu.
+- Malay slang and shortforms.
+- Informal spelling and common typing mistakes.
+- Voice transcription.
+- Natural everyday conversation.
 
-  const sendButton = document.getElementById("sendButton");
-  if (sendButton) sendButton.disabled = true;
+Examples:
+"sy nk g gym" = Saya nak pergi ke gym.
+"cafe kt mn" = Cafe dekat mana?
+"sy dri floor 2 nk ke cafe" = Saya dari Floor 2 nak ke Cafe.
+"aku kt tingkat 1" = Saya berada di tingkat 1.
+"brp tingkat pool" = Swimming pool berada di tingkat berapa?
 
-  try {
-    const response = await fetch(AI_API_URL, {
+Hotel directory:
+
+FLOOR 1:
+Main Entrance, Reception, Front Desk, Waiting Lounge,
+Restaurant, Cafe, Meeting Room, Hotel Office, Public Toilet.
+
+FLOOR 2:
+Standard Room, Deluxe Room, Twin Room, Family Room,
+Housekeeping Room, Laundry Room, Guest Lounge.
+
+FLOOR 3:
+Swimming Pool, Gymnasium, Spa and Massage, Sauna,
+Rooftop Restaurant, Sky Lounge, Kids Playroom.
+
+Reply naturally and concisely.
+Use the same language as the guest.
+Do not invent hotel information.
+Never claim the lift has physically moved or arrived.
+`;
+
+// ======================================
+// GROQ REQUEST
+// ======================================
+
+async function callGroq(messages) {
+  if (!GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is missing in Render Environment");
+  }
+
+  const response = await fetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        message: originalText,
-        currentFloor: currentFloor,
-        history: chatHistory
+        model: GROQ_MODEL,
+        messages,
+        temperature: 0.3,
+        max_tokens: 600
       })
-    });
-
-    let data;
-
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error("The AI server returned an invalid response.");
     }
+  );
 
-    if (!response.ok) {
-      throw new Error(
-        data.details || data.error || "AI server error"
-      );
-    }
+  const result = await response.json();
 
-    thinking.remove();
-
-    const reply = data.reply || data.response || data.answer;
-
-    if (typeof reply !== "string") {
-      throw new Error("Invalid AI response.");
-    }
-
-    // Keep conversation history for normal AI chat.
-    chatHistory.push({
-      role: "user",
-      content: originalText
-    });
-
-    chatHistory.push({
-      role: "assistant",
-      content: reply
-    });
-
-    chatHistory = chatHistory.slice(-10);
-
-    // Update current floor if backend detected it.
-    if (
-      data.currentFloor &&
-      [1, 2, 3].includes(Number(data.currentFloor))
-    ) {
-      updateCurrentFloor(Number(data.currentFloor));
-    }
-
-    // --------------------------------------
-    // 5. DIRECT SEND TO FIREBASE
-    // --------------------------------------
-
-    if (data.action === "send_lift") {
-      const fromFloor = Number(data.currentFloor || currentFloor);
-      const toFloor = Number(data.destinationFloor);
-
-      if (![1, 2, 3].includes(fromFloor)) {
-        addMessage(
-          "Saya perlu tahu tingkat semasa awak sebelum menghantar permintaan lif.",
-          "ai"
-        );
-
-        pendingLiftRequest = {
-          type: "direct",
-          destinationFloor: toFloor,
-          facility: data.facility || ""
-        };
-
-        waitingForCurrentFloor = true;
-        return;
-      }
-
-      updateCurrentFloor(fromFloor);
-
-      if (![1, 2, 3].includes(toFloor)) {
-        addMessage("Maaf, tingkat destinasi tidak sah.", "ai");
-        return;
-      }
-
-      if (fromFloor === toFloor) {
-        addMessage("You are already here!", "ai");
-        return;
-      }
-
-      addMessage(reply, "ai");
-
-      await submitAILiftRequest(toFloor);
-      return;
-    }
-
-    // --------------------------------------
-    // 6. BACKEND ASKS FOR CURRENT FLOOR
-    // --------------------------------------
-
-    if (data.action === "ask_current_floor") {
-      pendingLiftRequest = {
-        type: "direct",
-        destinationFloor: Number(data.destinationFloor),
-        facility: data.facility || ""
-      };
-
-      waitingForCurrentFloor = true;
-      addMessage(reply, "ai");
-      return;
-    }
-
-    // --------------------------------------
-    // 7. LOCATION QUESTION / OFFER
-    // --------------------------------------
-
-    if (data.action === "offer_lift") {
-      pendingLiftRequest = {
-        type: "offer",
-        destinationFloor: Number(data.destinationFloor),
-        facility: data.facility || ""
-      };
-
-      waitingForCurrentFloor = false;
-      addMessage(reply, "ai");
-      return;
-    }
-
-    // --------------------------------------
-    // 8. NORMAL AI RESPONSE
-    // --------------------------------------
-
-    addMessage(reply, "ai");
-
-  } catch (error) {
-    thinking.remove();
-
-    console.error("AI error:", error);
-
-    addMessage(
-      "Sorry, the AI Assistant is temporarily unavailable. Please try again.\n\n" +
-      error.message,
-      "ai"
+  if (!response.ok) {
+    throw new Error(
+      result.error?.message || "Groq API request failed"
     );
-
-  } finally {
-    isSendingMessage = false;
-
-    if (sendButton) {
-      sendButton.disabled = false;
-    }
   }
+
+  return result.choices?.[0]?.message?.content || "";
 }
 
 // ======================================
-// VOICE INPUT
+// ROUTES
 // ======================================
 
-function startVoice() {
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+app.get("/", (req, res) => {
+  res.json({
+    status: "online",
+    message: "Intelligent Elevator AI Backend is running"
+  });
+});
 
-  const status = document.getElementById("voiceStatus");
-  const voiceButton = document.getElementById("voiceButton");
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    aiConfigured: Boolean(GROQ_API_KEY)
+  });
+});
 
-  const selectedLanguage =
-    document.getElementById("voiceLanguage").value;
+// ======================================
+// AI ASSISTANT
+// ======================================
 
-  if (!SpeechRecognition) {
-    status.textContent =
-      "Voice recognition is not supported in this browser. Please use Chrome.";
-    return;
-  }
-
-  if (isListening) {
-    status.textContent = "Voice recognition is already active.";
-    return;
-  }
-
-  if (recognition) {
-    recognition.onend = null;
-
-    try {
-      recognition.stop();
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  recognition = new SpeechRecognition();
-
-  recognition.lang = selectedLanguage;
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-
-  isListening = true;
-
-  voiceButton.classList.add("recording");
-  voiceButton.textContent = "🔴 LISTENING...";
-
-  status.textContent =
-    selectedLanguage === "ms-MY"
-      ? "Mendengar... Sila bercakap sekarang."
-      : "Listening... Please speak now.";
-
-  recognition.onresult = function(event) {
-    let finalTranscript = "";
-    let interimTranscript = "";
-
-    for (
-      let i = event.resultIndex;
-      i < event.results.length;
-      i++
-    ) {
-      const transcript = event.results[i][0].transcript;
-
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript;
-      } else {
-        interimTranscript += transcript;
-      }
-    }
-
-    if (interimTranscript) {
-      status.textContent = "Recognising: " + interimTranscript;
-    }
-
-    if (finalTranscript.trim()) {
-      document.getElementById("chatInput").value =
-        finalTranscript.trim();
-
-      status.textContent =
-        "Voice captured. Sending to AI...";
-
-      sendMessage();
-    }
-  };
-
-  recognition.onerror = function(event) {
-    status.textContent = "Voice error: " + event.error;
-  };
-
-  recognition.onend = function() {
-    isListening = false;
-
-    voiceButton.classList.remove("recording");
-    voiceButton.textContent = "🎤 START VOICE";
-
-    if (
-      status.textContent.includes("Listening") ||
-      status.textContent.includes("Mendengar")
-    ) {
-      status.textContent = "Voice recognition stopped.";
-    }
-  };
-
+app.post("/api/assistant", async (req, res) => {
   try {
-    recognition.start();
+    const message = String(req.body.message || "").trim();
+
+    if (!message) {
+      return res.status(400).json({
+        error: "Message is required"
+      });
+    }
+
+    const history = Array.isArray(req.body.history)
+      ? req.body.history
+      : Array.isArray(req.body.chatHistory)
+        ? req.body.chatHistory
+        : [];
+
+    const safeHistory = history
+      .filter(item =>
+        item &&
+        ["user", "assistant"].includes(item.role) &&
+        typeof item.content === "string"
+      )
+      .slice(-10);
+
+    const language = detectLanguage(message);
+
+    let currentFloor = validFloor(req.body.currentFloor)
+      ? Number(req.body.currentFloor)
+      : null;
+
+    const detectedFloor = detectCurrentFloor(message);
+
+    if (detectedFloor !== null) {
+      currentFloor = detectedFloor;
+    }
+
+    const facility = findFacility(message);
+    const locationQuestion = isLocationQuestion(message);
+    const travelCommand = isTravelCommand(message);
+
+    // LOCATION QUESTION
+    if (facility && locationQuestion && !travelCommand) {
+      return res.json({
+        action: "offer_lift",
+        reply: locationReply(facility, language),
+        destinationFloor: facility.floor,
+        facility: facility.name,
+        currentFloor
+      });
+    }
+
+    // DIRECT FACILITY TRAVEL
+    if (facility && travelCommand) {
+      if (!currentFloor) {
+        return res.json({
+          action: "ask_current_floor",
+          reply: askFloorReply(language),
+          destinationFloor: facility.floor,
+          facility: facility.name
+        });
+      }
+
+      if (currentFloor === facility.floor) {
+        return res.json({
+          action: "chat",
+          reply: language === "ms"
+            ? "Awak sudah berada di tingkat yang sama! " +
+              facility.name + " berada di Tingkat " + facility.floor + "."
+            : "You are already on the same floor! " +
+              facility.name + " is on Floor " + facility.floor + "."
+        });
+      }
+
+      return res.json({
+        action: "send_lift",
+        reply: language === "ms"
+          ? "Baik! Permintaan perjalanan dari Tingkat " +
+            currentFloor + " ke " + facility.name +
+            " di Tingkat " + facility.floor +
+            " sedang dihantar."
+          : "Okay! Your trip from Floor " +
+            currentFloor + " to " + facility.name +
+            " on Floor " + facility.floor +
+            " is being submitted.",
+        currentFloor,
+        destinationFloor: facility.floor
+      });
+    }
+
+    // GENERAL CHAT
+    const aiMessages = [
+      {
+        role: "system",
+        content: SYSTEM_PROMPT
+      },
+      ...safeHistory,
+      {
+        role: "user",
+        content: message
+      }
+    ];
+
+    const aiReply = await callGroq(aiMessages);
+
+    return res.json({
+      action: "chat",
+      reply: aiReply
+    });
+
   } catch (error) {
-    isListening = false;
+    console.error("Assistant error:", error);
 
-    voiceButton.classList.remove("recording");
-    voiceButton.textContent = "🎤 START VOICE";
-
-    status.textContent =
-      "Unable to start microphone. Please try again.";
+    return res.status(500).json({
+      error: "AI assistant is temporarily unavailable",
+      details: error.message
+    });
   }
-}
+});
 
 // ======================================
-// STOP VOICE
+// ERROR HANDLER
 // ======================================
 
-function stopVoice() {
-  if (recognition && isListening) {
-    recognition.stop();
-  }
+app.use((error, req, res, next) => {
+  console.error("Server error:", error.message);
 
-  isListening = false;
+  res.status(500).json({
+    error: "Internal server error"
+  });
+});
 
-  const voiceButton = document.getElementById("voiceButton");
-  const status = document.getElementById("voiceStatus");
+// ======================================
+// START SERVER
+// ======================================
 
-  voiceButton.classList.remove("recording");
-  voiceButton.textContent = "🎤 START VOICE";
-
-  status.textContent = "Voice recognition stopped.";
-}
-</script>
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+  console.log("Chat model: " + GROQ_MODEL);
+});
