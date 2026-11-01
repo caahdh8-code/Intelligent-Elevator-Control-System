@@ -19,8 +19,7 @@ const GROQ_MODEL =
   process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 const GROQ_VISION_MODEL =
-  process.env.GROQ_VISION_MODEL ||
-  "qwen/qwen3.8-27b";
+  process.env.GROQ_VISION_MODEL || "qwen/qwen3.8-27b";
 
 const HOTEL_EMAIL =
   process.env.HOTEL_EMAIL || "caahdh8@gmail.com";
@@ -85,7 +84,9 @@ app.use(cors({
   }
 }));
 
-app.use(express.json({limit:"10mb"}));
+app.use(express.json({
+  limit: "10mb"
+}));
 
 // ======================================
 // EMAIL CONFIGURATION
@@ -93,17 +94,21 @@ app.use(express.json({limit:"10mb"}));
 
 let transporter = null;
 
-if (process.env.EMAIL_USER &&
-    process.env.EMAIL_APP_PASSWORD) {
+if (
+  process.env.EMAIL_USER &&
+  process.env.EMAIL_APP_PASSWORD
+) {
 
   transporter = nodemailer.createTransport({
-    host:process.env.SMTP_HOST || "smtp.gmail.com",
-    port:Number(process.env.SMTP_PORT || 465),
-    secure:Number(process.env.SMTP_PORT || 465) === 465,
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
 
-    auth:{
-      user:process.env.EMAIL_USER,
-      pass:process.env.EMAIL_APP_PASSWORD
+    port: Number(process.env.SMTP_PORT || 465),
+
+    secure: Number(process.env.SMTP_PORT || 465) === 465,
+
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_APP_PASSWORD
     }
   });
 }
@@ -113,79 +118,187 @@ if (process.env.EMAIL_USER &&
 // ======================================
 
 function validFloor(floor) {
-  return Number.isInteger(Number(floor)) &&
+  return (
+    Number.isInteger(Number(floor)) &&
     Number(floor) >= 1 &&
-    Number(floor) <= 3;
+    Number(floor) <= 3
+  );
 }
 
 function escapeHTML(value) {
-  return String(value || "").replace(/[&<>"']/g,char => ({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;",
-    "'":"&#39;"
+  return String(value || "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
   })[char]);
 }
 
 function validImage(image) {
-  return typeof image === "string" &&
-    /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image);
+  return (
+    typeof image === "string" &&
+    /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)
+  );
 }
 
 function generateReportId() {
-  return "HOTEL-" +
+  return (
+    "HOTEL-" +
     Date.now().toString().slice(-8) +
     "-" +
-    Math.floor(100 + Math.random() * 900);
+    Math.floor(100 + Math.random() * 900)
+  );
+}
+
+// ======================================
+// JSON RESPONSE PARSER
+// ======================================
+
+function parseAIJson(content) {
+
+  if (!content || typeof content !== "string") {
+    throw new Error("Empty AI response");
+  }
+
+  let cleaned = content.trim();
+
+  // Remove Markdown code fences.
+
+  cleaned = cleaned
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  // Find JSON object.
+
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1) {
+    const error = new Error(
+      "AI did not return a valid JSON object"
+    );
+
+    error.code = "invalid_json_response";
+
+    throw error;
+  }
+
+  cleaned = cleaned.substring(
+    firstBrace,
+    lastBrace + 1
+  );
+
+  try {
+
+    return JSON.parse(cleaned);
+
+  } catch (error) {
+
+    const parseError = new Error(
+      "AI returned invalid JSON: " + error.message
+    );
+
+    parseError.code = "invalid_json_response";
+
+    throw parseError;
+  }
 }
 
 // ======================================
 // GROQ AI FUNCTION
 // ======================================
 
-async function callGroq(messages,model) {
+async function callGroq(messages, model) {
 
   if (!GROQ_API_KEY) {
-    throw new Error("GROQ_API_KEY is missing in Render Environment");
-  }
-
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method:"POST",
-
-      headers:{
-        "Authorization":`Bearer ${GROQ_API_KEY}`,
-        "Content-Type":"application/json"
-      },
-
-      body:JSON.stringify({
-        model,
-        messages,
-        temperature:0.3,
-        response_format:{type:"json_object"}
-      })
-    }
-  );
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    console.error("Groq error:",result);
-
     throw new Error(
-      result.error?.message || "AI service request failed"
+      "GROQ_API_KEY is missing in Render Environment"
     );
   }
 
-  const content = result.choices?.[0]?.message?.content;
+  async function sendRequest(useJsonMode) {
 
-  if (!content) {
-    throw new Error("Empty AI response");
+    const requestBody = {
+      model,
+      messages,
+      temperature: 0.2
+    };
+
+    if (useJsonMode) {
+      requestBody.response_format = {
+        type: "json_object"
+      };
+    }
+
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify(requestBody)
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+
+      console.error("Groq error:", result);
+
+      const error = new Error(
+        result.error?.message ||
+        "AI service request failed"
+      );
+
+      error.code = result.error?.code;
+      error.status = response.status;
+
+      throw error;
+    }
+
+    const content =
+      result.choices?.[0]?.message?.content;
+
+    return parseAIJson(content);
   }
 
-  return JSON.parse(content);
+  try {
+
+    // First attempt: JSON mode.
+
+    return await sendRequest(true);
+
+  } catch (error) {
+
+    console.error(
+      "Groq first attempt failed:",
+      error.message
+    );
+
+    // Retry without JSON mode if JSON generation fails.
+
+    if (
+      error.code === "json_validate_failed" ||
+      error.code === "invalid_json_response"
+    ) {
+
+      console.log(
+        "Retrying Groq without JSON mode..."
+      );
+
+      return await sendRequest(false);
+    }
+
+    throw error;
+  }
 }
 
 // ======================================
@@ -196,7 +309,14 @@ const SYSTEM_PROMPT = `
 You are the Hotel AI Assistant for an Intelligent Elevator System.
 
 Communicate in the same language as the guest.
-Support English and Bahasa Melayu.
+
+Support:
+- English
+- Bahasa Melayu
+
+Always return one valid JSON object.
+Do not use Markdown.
+Do not write anything outside the JSON object.
 
 HOTEL FLOOR DIRECTORY:
 
@@ -209,123 +329,214 @@ ${FACILITIES[2].join(", ")}
 FLOOR 3:
 ${FACILITIES[3].join(", ")}
 
-LOCATION RULES:
+======================================
+LOCATION RULES
+======================================
+
 1. Answer facility location questions using this directory.
 2. Never invent a facility or its floor.
-3. If a facility is not listed, explain that you cannot find it in the directory.
+3. If a facility is not listed, explain that you cannot find it.
 4. Cafe is on Floor 1.
 5. Guest rooms are on Floor 2.
 6. Swimming pool and gymnasium are on Floor 3.
 
-ELEVATOR RULES:
+======================================
+ELEVATOR RULES
+======================================
+
 1. The website provides the guest's current floor.
 2. Never guess the current floor.
 3. If the guest asks to go to a floor, identify the destination.
-4. If the guest asks to go to a facility, identify its floor from the directory.
-5. Before requesting the elevator, tell the guest the current floor and destination floor.
-6. Ask the guest to confirm before submitting the request.
-7. If the guest's current floor equals the destination, say:
+4. If the guest asks to go to a facility, identify its floor.
+5. Tell the guest the current floor and destination floor.
+6. Ask the guest to confirm before submitting.
+7. If current floor equals destination floor, reply:
    "You are already here!"
 8. Never claim the lift has moved or arrived.
-9. The website will send the actual request to Firebase.
+9. The website sends actual requests to Firebase.
 10. Never submit an elevator request without confirmation.
 
-REPORT RULES:
-1. Support Lost Item, Suspicious Person, Facility Damage,
-   General Complaint and Other.
-2. Ask for report type, incident floor and incident location.
-3. Do not ask for guest name, phone number, email or room number.
-4. Ask for confirmation before submitting a report.
-5. For suspicious persons, describe observations only.
-   Never identify or accuse anyone based on appearance.
-6. If there is immediate danger, advise the guest to move to a safe
-   location and contact hotel security.
+Use this format when waiting for confirmation:
 
-IMAGE RULES:
+{
+  "action": "confirm_lift",
+  "reply": "Please confirm your destination.",
+  "destinationFloor": 3
+}
+
+Use this format after explicit confirmation:
+
+{
+  "action": "submit",
+  "reply": "Your elevator request is confirmed.",
+  "destinationFloor": 3
+}
+
+======================================
+REPORT RULES
+======================================
+
+Supported report types:
+
+- Lost Item
+- Suspicious Person
+- Facility Damage
+- General Complaint
+- Other
+
+1. Ask for report type, incident floor and incident location.
+2. Ask for a description if necessary.
+3. Do not ask for guest name, phone number, email or room number.
+4. Show the collected report details before asking for confirmation.
+5. Do not submit before explicit confirmation.
+6. For suspicious persons, describe visible observations only.
+7. Never identify or accuse anyone based on appearance.
+8. If there is immediate danger, advise the guest to move to a
+   safe location and contact hotel security.
+
+======================================
+REPORT CONFIRMATION RULES
+======================================
+
+1. Remember report information from the conversation history.
+2. When report details have already been shown to the guest,
+   understand confirmation words such as:
+
+   English:
+   - Yes
+   - Yes, I confirm
+   - I agree
+   - Submit the report
+
+   Bahasa Melayu:
+   - Ya
+   - Betul
+   - Saya sahkan
+   - Ya, saya nak laporkan
+   - Hantar laporan
+   - Saya setuju
+
+3. If the guest explicitly confirms the displayed report,
+   return action "report".
+
+4. Reuse the report type, incident floor, location and description
+   already provided in the conversation.
+
+5. Do not ask the guest to repeat existing information.
+
+6. Do not ask for confirmation again after confirmation.
+
+7. If important report information is missing, ask for it first.
+
+8. Only return action "report" after explicit confirmation.
+
+Use this format after confirmation:
+
+{
+  "action": "report",
+  "reply": "Your report is ready to submit.",
+  "report": {
+    "type": "Suspicious Person",
+    "incidentFloor": 2,
+    "location": "Room corridor",
+    "description": "A person was observed behaving suspiciously."
+  }
+}
+
+======================================
+IMAGE RULES
+======================================
+
 1. If an image is supplied, describe only what is visible.
 2. Do not invent details.
-3. If the guest reports a lost item or damaged facility,
-   help collect the report information.
+3. Do not identify a person in the image.
+4. Do not accuse anyone based on appearance.
+5. If the image relates to a report, use visible details
+   to help the guest describe the incident.
+6. The image may be attached to the final hotel report.
 
-RESPONSE FORMAT:
-Return valid JSON only.
+======================================
+RESPONSE FORMAT
+======================================
 
 NORMAL CHAT:
+
 {
-  "action":"chat",
-  "reply":"Your answer"
+  "action": "chat",
+  "reply": "Your answer"
 }
 
-ELEVATOR REQUEST - WAITING FOR CONFIRMATION:
+ELEVATOR CONFIRMATION:
+
 {
-  "action":"confirm_lift",
-  "reply":"You are currently on Floor 2. Do you want to go to Floor 3? Please confirm.",
-  "destinationFloor":3
+  "action": "confirm_lift",
+  "reply": "Please confirm your destination.",
+  "destinationFloor": 3
 }
 
-ELEVATOR REQUEST - USER HAS CONFIRMED:
+ELEVATOR SUBMISSION:
+
 {
-  "action":"submit",
-  "reply":"Your elevator request is confirmed.",
-  "currentFloor":2,
-  "destinationFloor":3
+  "action": "submit",
+  "reply": "Your elevator request is confirmed.",
+  "destinationFloor": 3
 }
 
-REPORT WAITING FOR CONFIRMATION:
-{
-  "action":"chat",
-  "reply":"Please confirm the report details before submission."
-}
+REPORT CONFIRMATION:
 
-REPORT AFTER CONFIRMATION:
 {
-  "action":"report",
-  "reply":"Your report is ready to submit.",
-  "report":{
-    "type":"Lost Item",
-    "incidentFloor":1,
-    "location":"Main Entrance",
-    "description":"A black wallet was lost."
+  "action": "report",
+  "reply": "Your report is ready to submit.",
+  "report": {
+    "type": "Lost Item",
+    "incidentFloor": 1,
+    "location": "Main Entrance",
+    "description": "A black wallet was lost."
   }
 }
 
 IMPORTANT:
-- Only use action "confirm_lift" when asking the guest to confirm.
-- Only use action "submit" after the guest explicitly confirms.
-- Never use action "submit" if current floor equals destination floor.
-- Only use action "report" after the guest explicitly confirms.
-- Do not claim that a request has been sent to Firebase.
-- Return valid JSON only.
+
+- Always return valid JSON.
+- Use the exact action names specified above.
+- Never invent missing report information.
+- Never claim an email has been sent.
+- Never claim a lift has physically moved.
+- Only submit after explicit confirmation.
 `;
 
 // ======================================
 // HOME PAGE
 // ======================================
 
-app.get("/",(req,res) => {
+app.get("/", (req, res) => {
+
   res.json({
-    status:"online",
-    message:"Intelligent Elevator AI Backend is running"
+    status: "online",
+    message: "Intelligent Elevator AI Backend is running"
   });
+
 });
 
 // ======================================
 // HEALTH CHECK
 // ======================================
 
-app.get("/api/health",(req,res) => {
+app.get("/api/health", (req, res) => {
+
   res.json({
-    status:"healthy",
-    aiConfigured:Boolean(GROQ_API_KEY),
-    emailConfigured:Boolean(transporter)
+    status: "healthy",
+    aiConfigured: Boolean(GROQ_API_KEY),
+    emailConfigured: Boolean(transporter)
   });
+
 });
 
 // ======================================
 // AI ASSISTANT API
 // ======================================
 
-app.post("/api/assistant",async(req,res) => {
+app.post("/api/assistant", async (req, res) => {
 
   try {
 
@@ -336,10 +547,15 @@ app.post("/api/assistant",async(req,res) => {
       image
     } = req.body;
 
-    if (!message || typeof message !== "string") {
+    if (
+      !message ||
+      typeof message !== "string"
+    ) {
+
       return res.status(400).json({
-        error:"Message is required"
+        error: "Message is required"
       });
+
     }
 
     if (
@@ -347,78 +563,123 @@ app.post("/api/assistant",async(req,res) => {
       currentFloor !== null &&
       !validFloor(currentFloor)
     ) {
+
       return res.status(400).json({
-        error:"Invalid current floor"
+        error: "Invalid current floor"
       });
+
     }
 
     if (!Array.isArray(history)) {
+
       return res.status(400).json({
-        error:"History must be an array"
+        error: "History must be an array"
       });
+
     }
+
+    // Keep only valid text conversation history.
 
     const safeHistory = history
       .filter(item =>
         item &&
-        ["user","assistant"].includes(item.role) &&
+        ["user", "assistant"].includes(item.role) &&
         typeof item.content === "string"
       )
       .slice(-10);
 
     const messages = [
+
       {
-        role:"system",
+        role: "system",
+
         content:
           SYSTEM_PROMPT +
           "\n\nGuest current floor: " +
           (currentFloor || "Not provided")
       },
+
       ...safeHistory
+
     ];
+
+    // ======================================
+    // IMAGE INPUT
+    // ======================================
 
     if (image) {
 
       if (!validImage(image)) {
+
         return res.status(400).json({
-          error:"Unsupported image format"
+          error: "Unsupported image format"
         });
+
       }
 
       messages.push({
-        role:"user",
-        content:[
+
+        role: "user",
+
+        content: [
+
           {
-            type:"text",
-            text:message
+            type: "text",
+            text: message
           },
+
           {
-            type:"image_url",
-            image_url:{url:image}
+            type: "image_url",
+            image_url: {
+              url: image
+            }
           }
+
         ]
+
       });
 
     } else {
 
       messages.push({
-        role:"user",
-        content:message
+
+        role: "user",
+        content: message
+
       });
 
     }
+
+    // ======================================
+    // SELECT AI MODEL
+    // ======================================
 
     const model = image
       ? GROQ_VISION_MODEL
       : GROQ_MODEL;
 
-    const data = await callGroq(messages,model);
+    console.log(
+      "Using AI model:",
+      model
+    );
 
-    if (!data || typeof data.reply !== "string") {
-      throw new Error("Invalid AI response format");
+    const data = await callGroq(messages, model);
+
+    if (
+      !data ||
+      typeof data.reply !== "string"
+    ) {
+
+      throw new Error(
+        "Invalid AI response format"
+      );
+
     }
 
-    // Validate elevator request before returning it.
+    // ======================================
+    // VALIDATE ELEVATOR REQUEST
+    // ======================================
+
     if (
       data.action === "confirm_lift" ||
       data.action === "submit"
@@ -428,25 +689,39 @@ app.post("/api/assistant",async(req,res) => {
         !validFloor(data.destinationFloor) ||
         !validFloor(currentFloor)
       ) {
+
         return res.status(400).json({
-          error:"Invalid elevator floor request"
+          error: "Invalid elevator floor request"
         });
+
       }
 
       if (
-        Number(currentFloor) === Number(data.destinationFloor)
+        Number(currentFloor) ===
+        Number(data.destinationFloor)
       ) {
+
         return res.json({
-          action:"chat",
-          reply:"You are already here!"
+
+          action: "chat",
+
+          reply: "You are already here!"
+
         });
+
       }
 
       data.currentFloor = Number(currentFloor);
-      data.destinationFloor = Number(data.destinationFloor);
+
+      data.destinationFloor =
+        Number(data.destinationFloor);
+
     }
 
-    // Validate report.
+    // ======================================
+    // VALIDATE REPORT
+    // ======================================
+
     if (data.action === "report") {
 
       const report = data.report;
@@ -458,28 +733,47 @@ app.post("/api/assistant",async(req,res) => {
         typeof report.location !== "string" ||
         !report.location.trim()
       ) {
+
         return res.status(400).json({
-          error:"Incomplete report information"
+
+          error: "Incomplete report information"
+
         });
+
       }
 
       data.report = {
-        type:report.type,
-        incidentFloor:Number(report.incidentFloor),
-        location:report.location.trim(),
-        description:String(report.description || "")
+
+        type: report.type,
+
+        incidentFloor:
+          Number(report.incidentFloor),
+
+        location:
+          report.location.trim(),
+
+        description:
+          String(report.description || "")
+
       };
+
     }
 
     return res.json(data);
 
-  } catch(error) {
+  } catch (error) {
 
-    console.error("Assistant error:",error);
+    console.error(
+      "Assistant error:",
+      error
+    );
 
     return res.status(500).json({
-      error:"AI assistant is temporarily unavailable",
-      details:error.message
+
+      error: "AI assistant is temporarily unavailable",
+
+      details: error.message
+
     });
 
   }
@@ -487,17 +781,21 @@ app.post("/api/assistant",async(req,res) => {
 });
 
 // ======================================
-// REPORT API
+// REPORT EMAIL API
 // ======================================
 
-app.post("/api/report",async(req,res) => {
+app.post("/api/report", async (req, res) => {
 
   try {
 
     if (!transporter) {
+
       return res.status(503).json({
-        error:"Email service is not configured"
+
+        error: "Email service is not configured"
+
       });
+
     }
 
     const {
@@ -508,57 +806,124 @@ app.post("/api/report",async(req,res) => {
       image
     } = req.body;
 
+    // Validate report type.
+
     if (!REPORT_TYPES.includes(type)) {
+
       return res.status(400).json({
-        error:"Invalid report type"
+
+        error: "Invalid report type"
+
       });
+
     }
 
+    // Validate floor.
+
     if (!validFloor(incidentFloor)) {
+
       return res.status(400).json({
-        error:"Invalid incident floor"
+
+        error: "Invalid incident floor"
+
       });
+
     }
+
+    // Validate location.
 
     if (
       typeof location !== "string" ||
       !location.trim()
     ) {
+
       return res.status(400).json({
-        error:"Incident location is required"
+
+        error: "Incident location is required"
+
       });
+
     }
 
+    // Validate image.
+
     if (image && !validImage(image)) {
+
       return res.status(400).json({
-        error:"Invalid image format"
+
+        error: "Invalid image format"
+
       });
+
     }
 
     const reportId = generateReportId();
 
-    const dateTime = new Intl.DateTimeFormat("en-MY",{
-      dateStyle:"full",
-      timeStyle:"long",
-      timeZone:"Asia/Kuala_Lumpur"
-    }).format(new Date());
+    const dateTime = new Intl.DateTimeFormat(
+      "en-MY",
+      {
+        dateStyle: "full",
+        timeStyle: "long",
+        timeZone: "Asia/Kuala_Lumpur"
+      }
+    ).format(new Date());
+
+    // ======================================
+    // EMAIL CONTENT
+    // ======================================
 
     const mailOptions = {
-      from:process.env.EMAIL_USER,
-      to:HOTEL_EMAIL,
-      subject:`New Hotel Report - ${reportId}`,
 
-      html:`
+      from: process.env.EMAIL_USER,
+
+      to: HOTEL_EMAIL,
+
+      subject: `New Hotel Report - ${reportId}`,
+
+      html: `
         <h2>Hotel Incident Report</h2>
-        <p><b>Report ID:</b> ${escapeHTML(reportId)}</p>
-        <p><b>Date:</b> ${escapeHTML(dateTime)}</p>
-        <p><b>Type:</b> ${escapeHTML(type)}</p>
-        <p><b>Floor:</b> ${Number(incidentFloor)}</p>
-        <p><b>Location:</b> ${escapeHTML(location)}</p>
-        <p><b>Description:</b> ${escapeHTML(description || "Not provided")}</p>
-        <p><b>Reporter:</b> Anonymous</p>
+
+        <p>
+          <b>Report ID:</b>
+          ${escapeHTML(reportId)}
+        </p>
+
+        <p>
+          <b>Date:</b>
+          ${escapeHTML(dateTime)}
+        </p>
+
+        <p>
+          <b>Type:</b>
+          ${escapeHTML(type)}
+        </p>
+
+        <p>
+          <b>Floor:</b>
+          ${Number(incidentFloor)}
+        </p>
+
+        <p>
+          <b>Location:</b>
+          ${escapeHTML(location)}
+        </p>
+
+        <p>
+          <b>Description:</b>
+          ${escapeHTML(description || "Not provided")}
+        </p>
+
+        <p>
+          <b>Reporter:</b>
+          Anonymous
+        </p>
       `
+
     };
+
+    // ======================================
+    // IMAGE ATTACHMENT
+    // ======================================
 
     if (image) {
 
@@ -567,29 +932,69 @@ app.post("/api/report",async(req,res) => {
       );
 
       if (matches) {
-        mailOptions.attachments = [{
-          filename:`report-${reportId}.${matches[1]}`,
-          content:Buffer.from(matches[2],"base64")
-        }];
+
+        const extension =
+          matches[1].toLowerCase() === "jpeg"
+            ? "jpg"
+            : matches[1].toLowerCase();
+
+        mailOptions.attachments = [
+
+          {
+
+            filename:
+              `report-${reportId}.${extension}`,
+
+            content:
+              Buffer.from(matches[2], "base64"),
+
+            contentType:
+              `image/${matches[1].toLowerCase()}`
+
+          }
+
+        ];
+
       }
+
     }
+
+    // ======================================
+    // SEND EMAIL
+    // ======================================
 
     await transporter.sendMail(mailOptions);
 
+    console.log(
+      "Report email sent successfully:",
+      reportId
+    );
+
     return res.json({
-      success:true,
+
+      success: true,
+
       reportId,
+
       dateTime,
-      message:"Report submitted successfully"
+
+      message: "Report submitted successfully"
+
     });
 
-  } catch(error) {
+  } catch (error) {
 
-    console.error("Report error:",error);
+    console.error(
+      "Report error:",
+      error
+    );
 
     return res.status(500).json({
-      error:"Unable to submit report",
-      details:error.message
+
+      error: "Unable to submit report",
+
+      details: error.message
+
     });
 
   }
@@ -600,12 +1005,19 @@ app.post("/api/report",async(req,res) => {
 // ERROR HANDLER
 // ======================================
 
-app.use((error,req,res,next) => {
-  console.error("Server error:",error.message);
+app.use((error, req, res, next) => {
+
+  console.error(
+    "Server error:",
+    error.message
+  );
 
   res.status(500).json({
-    error:"Internal server error"
+
+    error: "Internal server error"
+
   });
+
 });
 
 // ======================================
@@ -613,8 +1025,21 @@ app.use((error,req,res,next) => {
 // ======================================
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
 
-  console.log(`Vision model: ${GROQ_VISION_MODEL}`);
-  console.log(`Chat model: ${GROQ_MODEL}`);
+  console.log(
+    `Server running on port ${PORT}`
+  );
+
+  console.log(
+    `Vision model: ${GROQ_VISION_MODEL}`
+  );
+
+  console.log(
+    `Chat model: ${GROQ_MODEL}`
+  );
+
+  console.log(
+    `Email configured: ${Boolean(transporter)}`
+  );
+
 });
