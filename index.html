@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,7 +25,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: Arial, Helvetica, sans-serif;
-  color: var(--white);
+  color: white;
   background:
     radial-gradient(ellipse at top, #12618a 0%, transparent 55%),
     linear-gradient(135deg, #075075, #062943 65%, #041e35);
@@ -146,7 +147,7 @@ header p {
   margin-top: 20px;
 }
 
-/* AI ASSISTANT BUTTON */
+/* AI BUTTON */
 
 .ai-toggle {
   position: fixed;
@@ -154,7 +155,6 @@ header p {
   top: 50%;
   transform: translateY(-50%);
   z-index: 999999;
-  pointer-events: auto;
   background: var(--cyan);
   color: #05334c;
   border: 0;
@@ -165,14 +165,9 @@ header p {
   cursor: pointer;
   writing-mode: vertical-rl;
   box-shadow: 0 5px 20px #0005;
-  touch-action: manipulation;
 }
 
-.ai-toggle:hover {
-  background: white;
-}
-
-/* AI CHAT WINDOW */
+/* AI WINDOW */
 
 .ai-window {
   position: fixed;
@@ -190,7 +185,6 @@ header p {
   flex-direction: column;
   box-shadow: 0 10px 40px #0008;
   overflow: hidden;
-  pointer-events: auto;
 }
 
 .ai-header {
@@ -267,7 +261,8 @@ header p {
   font-size: 14px;
 }
 
-.send-btn, .tool-btn {
+.send-btn,
+.tool-btn {
   border: 0;
   border-radius: 10px;
   padding: 12px;
@@ -319,6 +314,7 @@ header p {
 }
 
 @media(max-width: 650px) {
+
   header {
     padding: 25px 10px;
   }
@@ -376,6 +372,7 @@ header p {
 <main class="container">
 
   <section class="panel" id="currentPage">
+
     <h2>SELECT CURRENT FLOOR</h2>
 
     <p class="subtitle">
@@ -401,6 +398,7 @@ header p {
 
     </div>
   </section>
+
 
   <section class="panel hidden" id="destinationPage">
 
@@ -445,18 +443,15 @@ header p {
 
 </main>
 
-<!-- AI BUTTON -->
 
 <button
   type="button"
   class="ai-toggle"
   id="aiToggle"
-  aria-label="Open AI Assistant"
 >
   ✦ AI Assistant
 </button>
 
-<!-- AI CHAT WINDOW -->
 
 <div class="ai-window hidden" id="aiWindow">
 
@@ -468,7 +463,6 @@ header p {
       type="button"
       class="ai-close"
       id="aiClose"
-      aria-label="Close AI Assistant"
     >
       ×
     </button>
@@ -482,12 +476,13 @@ header p {
 You can ask me in English or Bahasa Melayu.
 
 Examples:
-• Saya dari tingkat 2 dan nak ke gym.
-• Saya dari level kafe dan nak ke level gym.
+• Saya dari tingkat 2 nak ke tingkat 1.
 • Saya dari bilik 205 nak ke reception.
-• Take me from the swimming pool to Room 215.
+• Saya nak pergi gym.
+• Cafe kat tingkat berapa?
+• Gym dekat mana?
 • Where is the cafe?
-• Gym kat mana?
+• Take me to the swimming pool.
 
 All room numbers from 200 to 299 are located on Floor 2.
 
@@ -517,8 +512,15 @@ You can type your question or use voice input.</div>
     </div>
 
     <select class="voice-language" id="voiceLanguage">
-      <option value="ms-MY">Voice Language: Bahasa Melayu</option>
-      <option value="en-US">Voice Language: English</option>
+
+      <option value="ms-MY">
+        Voice Language: Bahasa Melayu
+      </option>
+
+      <option value="en-US">
+        Voice Language: English
+      </option>
+
     </select>
 
     <div class="ai-tools">
@@ -549,6 +551,7 @@ You can type your question or use voice input.</div>
 
 </div>
 
+
 <script>
 
 // ==========================================
@@ -574,45 +577,20 @@ let waitingForOfferConfirmation = false;
 
 
 // ==========================================
-// 2. AI BUTTON
+// 2. AI WINDOW
 // ==========================================
 
 const aiToggle = document.getElementById("aiToggle");
 const aiWindow = document.getElementById("aiWindow");
 const aiClose = document.getElementById("aiClose");
 
-function toggleAI() {
+aiToggle.addEventListener("click", () => {
 
-  const isHidden =
-    aiWindow.classList.contains("hidden");
-
-  if (isHidden) {
-
-    aiWindow.classList.remove("hidden");
-
-    document.getElementById("chatInput").focus();
-
-  } else {
-
-    aiWindow.classList.add("hidden");
-
-  }
-
-}
-
-aiToggle.addEventListener("click", function(event) {
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  toggleAI();
+  aiWindow.classList.toggle("hidden");
 
 });
 
-aiClose.addEventListener("click", function(event) {
-
-  event.preventDefault();
-  event.stopPropagation();
+aiClose.addEventListener("click", () => {
 
   aiWindow.classList.add("hidden");
 
@@ -631,6 +609,7 @@ const FACILITY_FLOORS = {
   "entrance": 1,
   "reception": 1,
   "front desk": 1,
+  "lobby": 1,
   "waiting lounge": 1,
   "restaurant": 1,
   "cafe": 1,
@@ -667,7 +646,35 @@ const FACILITY_FLOORS = {
 
 
 // ==========================================
-// 4. TEXT NORMALISATION
+// 4. ALIASES
+// ==========================================
+
+const FACILITY_ALIASES = {
+
+  "kafe": "cafe",
+  "café": "cafe",
+  "kolam renang": "swimming pool",
+  "kolam": "swimming pool",
+  "gim": "gym",
+  "bilik standard": "standard room",
+  "bilik deluxe": "deluxe room",
+  "bilik twin": "twin room",
+  "bilik keluarga": "family room",
+  "kaunter reception": "reception",
+  "kaunter penerimaan": "reception",
+  "lobi": "lobby",
+  "restoran": "restaurant",
+  "pejabat hotel": "hotel office",
+  "bilik mesyuarat": "meeting room",
+  "tandas awam": "public toilet",
+  "bilik dobi": "laundry room",
+  "ruang santai": "guest lounge"
+
+};
+
+
+// ==========================================
+// 5. TEXT NORMALISATION
 // ==========================================
 
 function normaliseText(text) {
@@ -701,7 +708,7 @@ function expandMalayShortform(text) {
 
 
 // ==========================================
-// 5. CHAT DISPLAY
+// 6. CHAT DISPLAY
 // ==========================================
 
 function addMessage(message, sender = "ai") {
@@ -725,7 +732,7 @@ function addMessage(message, sender = "ai") {
 
 
 // ==========================================
-// 6. FLOOR PAGE
+// 7. FLOOR PAGE
 // ==========================================
 
 function updateCurrentFloor(floor) {
@@ -771,8 +778,75 @@ function backToCurrent() {
 
 
 // ==========================================
-// 7. ROOM DETECTION
-// ALL ROOMS 200-299 = FLOOR 2
+// 8. FLOOR NUMBER RECOGNITION
+// ==========================================
+
+function detectExplicitFloor(text) {
+
+  const t = expandMalayShortform(text);
+
+  const floorWords = {
+
+    "satu": 1,
+    "pertama": 1,
+    "one": 1,
+    "first": 1,
+
+    "dua": 2,
+    "kedua": 2,
+    "two": 2,
+    "second": 2,
+
+    "tiga": 3,
+    "ketiga": 3,
+    "three": 3,
+    "third": 3
+
+  };
+
+  const wordPattern =
+    "(1|2|3|satu|pertama|one|first|dua|kedua|two|second|tiga|ketiga|three|third)";
+
+  const patterns = [
+
+    new RegExp(
+      "\\b(?:floor|level|tingkat)\\s*(?:number\\s*)?" +
+      wordPattern + "\\b"
+    ),
+
+    new RegExp(
+      "\\b" + wordPattern +
+      "\\s*(?:st|nd|rd)?\\s*(?:floor|level|tingkat)\\b"
+    ),
+
+    new RegExp(
+      "\\b(?:floor|level|tingkat)\\s*(?:no\\s*)?" +
+      wordPattern + "\\b"
+    )
+
+  ];
+
+  for (const pattern of patterns) {
+
+    const match = t.match(pattern);
+
+    if (match) {
+
+      const value = match[1];
+
+      return Number(floorWords[value] || value);
+
+    }
+
+  }
+
+  return null;
+
+}
+
+
+// ==========================================
+// 9. ROOM DETECTION
 // ==========================================
 
 function detectRoomFloor(text) {
@@ -818,34 +892,8 @@ function detectRoomFloor(text) {
 
 
 // ==========================================
-// 8. FACILITY DETECTION
+// 10. FACILITY DETECTION
 // ==========================================
-
-const FACILITY_ALIASES = {
-
-  "kafe": "cafe",
-  "café": "cafe",
-  "kaffe": "cafe",
-  "kolam renang": "swimming pool",
-  "kolam": "swimming pool",
-  "gymnasium": "gymnasium",
-  "gim": "gym",
-  "bilik standard": "standard room",
-  "bilik deluxe": "deluxe room",
-  "bilik twin": "twin room",
-  "bilik keluarga": "family room",
-  "kaunter reception": "reception",
-  "kaunter penerimaan": "reception",
-  "lobi": "waiting lounge",
-  "restoran": "restaurant",
-  "pejabat hotel": "hotel office",
-  "bilik mesyuarat": "meeting room",
-  "tandas awam": "public toilet",
-  "bilik dobi": "laundry room",
-  "ruang santai": "guest lounge"
-
-};
-
 
 function findFacility(text) {
 
@@ -895,41 +943,7 @@ function detectPlace(text) {
 
 
 // ==========================================
-// 9. EXPLICIT FLOOR DETECTION
-// ==========================================
-
-function detectExplicitFloor(text) {
-
-  const t = expandMalayShortform(text);
-
-  const patterns = [
-
-    /\b(?:floor|level|tingkat)\s*(?:number\s*)?([123])\b/,
-    /\b(?:floor|level|tingkat)\s*(?:no\s*)?([123])\b/,
-    /\b([123])\s*(?:st|nd|rd)?\s*floor\b/,
-    /\b([123])\s*(?:st|nd|rd)?\s*level\b/
-
-  ];
-
-  for (const pattern of patterns) {
-
-    const match = t.match(pattern);
-
-    if (match) {
-
-      return Number(match[1]);
-
-    }
-
-  }
-
-  return null;
-
-}
-
-
-// ==========================================
-// 10. ORIGIN DETECTION
+// 11. ORIGIN DETECTION
 // ==========================================
 
 function detectOriginPlace(text) {
@@ -995,7 +1009,7 @@ function detectOriginPlace(text) {
 
 
 // ==========================================
-// 11. DESTINATION DETECTION
+// 12. DESTINATION DETECTION
 // ==========================================
 
 function detectDestinationPlace(text) {
@@ -1014,6 +1028,7 @@ function detectDestinationPlace(text) {
     "going to ",
     "want to visit ",
     "nak pergi ke ",
+    "nak pergi ",
     "nak ke ",
     "mahu ke ",
     "pergi ke ",
@@ -1064,48 +1079,18 @@ function detectDestinationPlace(text) {
 
 
 // ==========================================
-// 12. DETECT ORIGIN AND DESTINATION
+// 13. JOURNEY DETECTION
 // ==========================================
 
 function detectJourney(text) {
 
   const t = expandMalayShortform(text);
 
-  let origin = detectOriginPlace(t);
-
-  let destination = detectDestinationPlace(t);
-
-  // Example: "I'm on Floor 2. Take me to gym."
-
-  if (!origin) {
-
-    const floorMatch = t.match(
-      /\b(?:i am on|im on|i am at|im at|saya di|saya dekat|current floor|my floor)\s+(?:floor|level|tingkat)?\s*([123])\b/
-    );
-
-    if (floorMatch) {
-
-      origin = {
-
-        name: "Floor " + floorMatch[1],
-
-        floor: Number(floorMatch[1])
-
-      };
-
-    }
-
-  }
-
-  // Example: "Saya dari level kafe dan nak ke level gym."
-
-  // The origin and destination are extracted separately.
-
   return {
 
-    origin: origin,
+    origin: detectOriginPlace(t),
 
-    destination: destination
+    destination: detectDestinationPlace(t)
 
   };
 
@@ -1113,27 +1098,23 @@ function detectJourney(text) {
 
 
 // ==========================================
-// 13. TRAVEL INTENT
+// 14. INTENT DETECTION
 // ==========================================
 
 function hasTravelIntent(text) {
 
   const t = expandMalayShortform(text);
 
-  return /\b(nak|mahu|pergi|bawa|hantar|go|take|send|bring|want|visit|jom|move)\b/.test(t);
+  return /\b(nak|mahu|pergi|bawa|hantar|go|take|send|bring|want|visit|jom|move|escort)\b/.test(t);
 
 }
 
-
-// ==========================================
-// 14. LOCATION QUESTION
-// ==========================================
 
 function isLocationQuestion(text) {
 
   const t = expandMalayShortform(text);
 
-  return /\b(where|kat mana|di mana|mana|location|located|which floor|tingkat berapa)\b/.test(t);
+  return /\b(where|kat mana|di mana|mana|location|located|which floor|tingkat berapa|what floor|what level)\b/.test(t);
 
 }
 
@@ -1293,7 +1274,7 @@ async function selectDestination(floor) {
 
 
 // ==========================================
-// 17. CLEAR PENDING REQUEST
+// 17. PENDING REQUEST MANAGEMENT
 // ==========================================
 
 function clearPendingRequest() {
@@ -1389,14 +1370,15 @@ async function submitAILiftRequest(destination) {
 
 
 // ==========================================
-// 19. PROCESS USER MESSAGE
+// 19. MAIN AI MESSAGE PROCESSING
 // ==========================================
 
 async function processUserMessage(text) {
 
   const t = expandMalayShortform(text);
 
-  // User answers the question about current floor.
+
+  // A. User answers current floor question
 
   if (
     pendingLiftRequest &&
@@ -1406,7 +1388,7 @@ async function processUserMessage(text) {
     const floor = detectExplicitFloor(t);
 
     const simpleFloor = t.match(
-      /^(?:floor|level|tingkat)?\s*([123])$/
+      /^(?:floor|level|tingkat)?\s*(1|2|3)$/
     );
 
     const answerFloor =
@@ -1431,10 +1413,16 @@ async function processUserMessage(text) {
 
     }
 
+    addMessage(
+      "Please tell me your current floor: Floor 1, Floor 2 or Floor 3."
+    );
+
+    return true;
+
   }
 
 
-  // User confirms a location offer.
+  // B. User confirms or cancels a lift offer
 
   if (
     pendingLiftRequest &&
@@ -1484,7 +1472,38 @@ async function processUserMessage(text) {
   }
 
 
-  // Detect source and destination.
+  // C. Location questions
+  // Answer only. Do not send a lift command.
+
+  if (isLocationQuestion(t) && !hasTravelIntent(t)) {
+
+    const place = detectPlace(t);
+
+    if (place) {
+
+      addMessage(
+
+        place.name +
+        " is located on Floor " +
+        place.floor +
+        "."
+
+      );
+
+    } else {
+
+      addMessage(
+        "Please tell me which hotel facility you would like to locate."
+      );
+
+    }
+
+    return true;
+
+  }
+
+
+  // D. Detect journey origin and destination
 
   const journey = detectJourney(t);
 
@@ -1493,7 +1512,7 @@ async function processUserMessage(text) {
   const destination = journey.destination;
 
 
-  // Both source and destination are identified.
+  // E. User provides both origin and destination
 
   if (
     hasTravelIntent(t) &&
@@ -1508,7 +1527,9 @@ async function processUserMessage(text) {
     if (origin.floor === destination.floor) {
 
       addMessage(
-        "You are already on the same floor!"
+        "You are already on Floor " +
+        destination.floor +
+        "!"
       );
 
       return true;
@@ -1524,9 +1545,7 @@ async function processUserMessage(text) {
   }
 
 
-  // User says current floor and destination floor directly.
-
-  // Example: "I'm on Floor 2. Take me to Floor 3."
+  // F. User gives origin but no destination
 
   if (
     hasTravelIntent(t) &&
@@ -1539,9 +1558,11 @@ async function processUserMessage(text) {
     updateCurrentFloor(origin.floor);
 
     addMessage(
-      "I understand that you are currently on Floor " +
-      origin.floor +
+
+      "I understand that you are currently at " +
+      origin.name +
       ". Where would you like to go?"
+
     );
 
     return true;
@@ -1549,7 +1570,7 @@ async function processUserMessage(text) {
   }
 
 
-  // Destination is known, but current floor is unknown.
+  // G. User gives destination only
 
   if (
     hasTravelIntent(t) &&
@@ -1590,7 +1611,7 @@ async function processUserMessage(text) {
   }
 
 
-  // Location question: do not send a request immediately.
+  // H. Location enquiry with optional lift offer
 
   if (isLocationQuestion(t)) {
 
@@ -1622,54 +1643,14 @@ async function processUserMessage(text) {
   }
 
 
-  // Detect room destination when user says "Room 215".
-
-  // If there is no origin, ask for current floor.
+  // I. Normal room location question
 
   const room = detectRoomFloor(t);
 
-  if (
-    room &&
-    hasTravelIntent(t)
-  ) {
-
-    if (currentFloor !== null) {
-
-      await submitAILiftRequest(2);
-
-    } else {
-
-      pendingLiftRequest = {
-
-        destinationFloor: 2
-
-      };
-
-      waitingForCurrentFloor = true;
-
-      addMessage(
-        "Room " +
-        room.name.replace("Room ", "") +
-        " is located on Floor 2. What floor are you currently on?"
-      );
-
-    }
-
-    return true;
-
-  }
-
-
-  // User only mentions a room location.
-
-  if (
-    room &&
-    isLocationQuestion(t)
-  ) {
+  if (room) {
 
     addMessage(
-      room.name +
-      " is located on Floor 2."
+      room.name + " is located on Floor 2."
     );
 
     return true;
@@ -1677,13 +1658,15 @@ async function processUserMessage(text) {
   }
 
 
+  // J. Let the AI backend handle normal conversation
+
   return false;
 
 }
 
 
 // ==========================================
-// 20. MAIN CHAT FUNCTION
+// 20. SEND CHAT MESSAGE
 // ==========================================
 
 async function sendMessage() {
@@ -1701,16 +1684,10 @@ async function sendMessage() {
 
   addMessage(text, "user");
 
-  // Process local commands first.
-
-  // This prevents AI backend from sending duplicate requests.
-
   const handled =
     await processUserMessage(text);
 
   if (handled) return;
-
-  // Normal conversation goes to backend AI.
 
   await askAI(text);
 
@@ -1787,7 +1764,7 @@ async function askAI(text) {
     }
 
 
-    // If backend identifies a destination request.
+    // Backend identifies a lift request
 
     if (data.action === "send_lift") {
 
@@ -1830,7 +1807,7 @@ async function askAI(text) {
     }
 
 
-    // Backend asks current floor.
+    // Backend asks current floor
 
     if (data.action === "ask_current_floor") {
 
@@ -1859,7 +1836,7 @@ async function askAI(text) {
     }
 
 
-    // Backend offers lift service.
+    // Backend offers lift service
 
     if (data.action === "confirm_lift") {
 
@@ -1878,14 +1855,17 @@ async function askAI(text) {
 
       }
 
-      addMessage(data.reply);
+      addMessage(
+        data.reply ||
+        "Would you like me to send the lift there?"
+      );
 
       return;
 
     }
 
 
-    // Normal AI response.
+    // Normal AI response
 
     if (data.reply) {
 
@@ -1924,7 +1904,7 @@ async function askAI(text) {
 
 
 // ==========================================
-// 22. SEND BUTTON AND ENTER KEY
+// 22. SEND BUTTON AND ENTER
 // ==========================================
 
 document.getElementById("sendButton")
@@ -2107,7 +2087,6 @@ document.getElementById("voiceButton")
 
 document.getElementById("stopVoiceButton")
   .addEventListener("click", stopVoice);
-
 
 </script>
 
